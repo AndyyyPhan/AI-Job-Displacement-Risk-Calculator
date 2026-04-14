@@ -3,32 +3,57 @@
 ## Project Overview
 A single-page web app that assesses automation risk for any job. The user inputs their job title and optional context; the system returns an automation risk score (0–100), a displacement timeline with confidence range, and personalized reskilling recommendations.
 
+The scoring pipeline is anchored to published empirical data — Eloundou et al. (2023) task-level exposure ratings, Anthropic Economic Index observed-exposure measures, BLS wage statistics, and BLS employment projections — bundled at build time into the O*NET JSON. The LLM's role is to interpret and adjust these empirical baselines given the user's specific context, not to produce scores from scratch.
+
 ## Tech Stack
 - **Framework:** React + TypeScript (Vite)
 - **Styling:** Tailwind CSS v4 (via `@tailwindcss/vite`)
 - **Charts:** Recharts (timeline visualization with confidence band)
 - **Validation:** Zod (validates structured JSON responses from Claude)
 - **API:** Anthropic API (`claude-sonnet-4-5`) via `fetch`
-- **Data:** Bundled O*NET Database (tasks, skills, alternate titles) — preprocessed from the official xlsx download into a static JSON file at build time
+- **Data:** Bundled O*NET Database enriched with external empirical datasets (see "Building the Enriched Dataset" below) — preprocessed into a static JSON file at build time
 - **Build-time parsing:** `xlsx` (SheetJS) — dev dependency only
 - **No backend** for v1 — Anthropic API calls made client-side
 
 ## Architecture: Multi-Agent Pipeline
-Three sequential steps, each passing structured JSON to the next. Agent 1 is a pure code lookup; Agents 2 and 3 are LLM calls.
+Three sequential steps, each passing structured JSON to the next. Agent 1 is a pure code lookup that also computes an empirical baseline score; Agents 2 and 3 are LLM calls that interpret and adjust that baseline.
 
-### Agent 1 — Job Researcher (pure code, no LLM)
+### Agent 1 — Job Researcher + Empirical Scorer (pure code, no LLM)
 - **Input:** Job title + any user-supplied context
-- **Tools:** None. Looks up the job in a bundled O*NET JSON dataset.
-- **Task:** Fuzzy-match the user's free-text job title against O*NET occupation titles, alternate titles, and reported titles. Return the best matching SOC occupation's Core tasks and high-importance skills.
-- **Why no LLM:** The prior version used `web_search` to scrape O*NET pages, which cost 100k+ input tokens per call and blew through our rate limit. Bundling the database gives us the same data for zero tokens.
-- **Output (JSON — shape unchanged from v1 so downstream agents don't care):**
+- **Tools:** None. Looks up the job in a bundled O*NET JSON dataset enriched with empirical data.
+- **Task:** Fuzzy-match the user's free-text job title against O*NET occupation titles, alternate titles, and reported titles. Return the best matching SOC occupation's core tasks, high-importance skills, and all pre-computed empirical fields.
+- **Why no LLM:** The prior version used `web_search` to scrape O*NET pages, which cost 100k+ input tokens per call and blew through our rate limit. Bundling the database gives us the same data for zero tokens. Bundling empirical datasets alongside it means the LLM doesn't need to recall statistics from training data.
+- **Empirical fields computed in code (per occupation):**
+  - `occupation_beta` — Eloundou et al. β score (0–1), the employment-weighted average of task-level β values for this SOC code. Represents the share of tasks theoretically exposed to LLMs.
+  - `observed_exposure` — Anthropic Economic Index coverage score (0–1) from Massenkoff & McCrory (2026). Represents the share of tasks actually being performed by AI in professional settings.
+  - `exposure_gap` — `occupation_beta - observed_exposure`. A large gap indicates adoption barriers (regulatory, trust, tooling) despite theoretical feasibility.
+  - `median_wage` — BLS OEWS median annual wage for this SOC code.
+  - `wage_quartile` — Which quartile (1–4) of the overall US wage distribution this occupation falls in. Computed deterministically from `median_wage` against the full SOC wage distribution.
+  - `bls_projected_growth_pct` — BLS projected employment change (%) for 2024–2034.
+  - `empirical_baseline_score` — A composite risk score (0–100) computed from the above fields before the LLM runs (see "Empirical Baseline Score" section below).
+- **Empirical fields computed in code (per task):**
+  - `beta` — Eloundou et al. task-level β (0, 0.5, or 1). Joined by O*NET task ID or, where IDs don't align, by semantic match against Eloundou's task descriptions.
+- **Output (JSON):**
 ```json
 {
   "job_title": string,
   "onet_match": string,       // "SOC code Title", e.g. "29-1224.00 Radiologists"
-  "tasks": [{ "name": string, "description": string }],
+  "tasks": [{
+    "name": string,
+    "description": string,
+    "beta": number             // 0, 0.5, or 1 — from Eloundou et al.
+  }],
   "skills": [string],
-  "additional_context": string
+  "additional_context": string,
+  "empirical": {
+    "occupation_beta": number,
+    "observed_exposure": number,
+    "exposure_gap": number,
+    "median_wage": number,
+    "wage_quartile": number,   // 1 (lowest) – 4 (highest)
+    "bls_projected_growth_pct": number,
+    "empirical_baseline_score": number  // 0–100
+  }
 }
 ```
 - **Match classification:** `matchOnetOccupation()` scores every occupation against the query and normalizes to a 0–1 confidence, then returns one of three result types that drive the UI:
@@ -37,36 +62,77 @@ Three sequential steps, each passing structured JSON to the next. Agent 1 is a p
   - `none` — no occupation scored above zero. The wrapper `researchJob()` throws `OnetNoMatchError` and the UI shows a friendly error with a "Start over" button.
 - Downstream shape is identical on both the strong and ambiguous paths: the chosen occupation is fed through `buildJobProfileFromOccupation()` so Agents 2 and 3 receive the same `JobProfile` JSON regardless of how it was selected.
 
+### Empirical Baseline Score
+
+The `empirical_baseline_score` is computed in pure TypeScript inside Agent 1's code path, before any LLM call. It gives Agent 2 an empirical anchor to adjust rather than a blank slate to fill.
+
+**Formula (provisional — tune weights based on validation):**
+```
+baseline = (
+    0.40 × occupation_beta × 100       // theoretical exposure drives the base
+  + 0.30 × observed_exposure × 100     // actual usage closes the gap
+  + 0.15 × wage_tier_adjustment        // lower wages → earlier exposure
+  + 0.15 × growth_adjustment           // negative BLS growth → higher risk
+)
+```
+
+Where:
+- `wage_tier_adjustment`: quartile 1 → 80, quartile 2 → 55, quartile 3 → 35, quartile 4 → 20. Based on the Anthropic report's finding that lower-wage occupations show earlier automation exposure.
+- `growth_adjustment`: linearly maps BLS projected growth from the observed range (roughly −15% to +30%) onto 100–0, so strong negative growth maps to high risk and strong positive growth maps to low risk.
+
+The score is clamped to 0–100. It is explicitly **not** a final answer — it's a starting point for Agent 2 to adjust. The results screen should display both the empirical baseline and the LLM-adjusted final score, with a clear label explaining the difference.
+
 ### Agent 2 — Risk Scorer (LLM, no tools)
-- **Input:** Job profile JSON from Agent 1
-- **Tools:** None. Uses model knowledge only — web_search removed to stay under our rate limit.
-- **Task:** Score each task on "bottleneckedness" — how hard it is to automate — using three bottleneck dimensions:
+- **Input:** Enriched job profile JSON from Agent 1, including per-task `beta` scores and occupation-level `empirical` block.
+- **Tools:** None. Uses model knowledge only.
+- **Task (revised):** Agent 2's job is now **contextual adjustment**, not scoring from scratch. The system prompt should frame it as:
+  > "You are given an empirical baseline risk score of {empirical_baseline_score}/100 for this occupation, derived from published task-exposure data (Eloundou et al. 2023), real-world AI usage data (Anthropic Economic Index 2026), BLS wage statistics, and BLS employment projections. Each task also has a pre-computed β score indicating its theoretical LLM exposure. Your job is to adjust this baseline given the user's specific task mix and context. Explain where and why you diverge from the empirical baseline."
+- **Bottleneck dimensions** (used for adjustment, not for producing the base score):
   1. **Novel problem-solving** (unstructured, creative, or context-dependent reasoning)
   2. **Social/interpersonal components** (negotiation, empathy, trust-building, caregiving)
   3. **Physical dexterity** (fine motor skills, unstructured physical environments)
-- Aggregate task scores into an overall risk score and timeline estimate.
+  4. **API migration signal** — tasks with high `beta` AND high `observed_exposure` are likely already migrating to automated workflows, suggesting near-term transformation
+- **What the LLM adds over the empirical baseline:**
+  - Task-level rationales explaining *why* a specific task is harder or easier to automate than its β score suggests (e.g., "β=1 but this task requires real-time physical inspection that LLMs cannot perform")
+  - Context adjustments based on the user's additional input (e.g., "mostly remote, heavy client calls" shifts the social-component weighting)
+  - The augmentation/automation spectrum tags (`predicted_interaction_type`) which require qualitative judgment
+  - Timeline reasoning that accounts for adoption barriers beyond what the empirical data captures
 - **Output (JSON):**
 ```json
 {
-  "overall_risk_score": number, // 0–100
+  "empirical_baseline_score": number,  // pass-through from Agent 1 for display
+  "adjusted_risk_score": number,       // 0–100, LLM's final assessment
+  "adjustment_rationale": string,      // why the LLM diverged from baseline
   "timeline_category": "near-term" | "mid-term" | "long-term",
   "timeline_years_low": number,
   "timeline_years_high": number,
   "scored_tasks": [{
     "name": string,
-    "bottleneck_score": number, // 0–100, higher = harder to automate
-    "automation_risk": number, // 0–100
+    "beta": number,                    // pass-through from Agent 1
+    "bottleneck_score": number,        // 0–100, higher = harder to automate
+    "automation_risk": number,         // 0–100
     "rationale": string,
-    "bottleneck_types": string[]
+    "bottleneck_types": string[],
+    "predicted_interaction_type": string
   }],
+  "spectrum_summary": string,
   "risk_rationale": string
 }
 ```
 
-### Agent 3 — Reskilling Advisor (LLM, web_search enabled)
-- **Input:** Risk profile JSON from Agent 2 + original job profile from Agent 1
-- **Tools:** `web_search` with `max_uses: 1`. Used to verify deep-link URLs (Coursera slugs, edX course IDs, etc.) before including them in the plan. Without it, the model hallucinates plausible-looking URLs that 404.
-- **Task:** Identify transferable skills the user has, match them to lower-risk jobs, and recommend reskilling resources. The prompt explicitly steers the model toward canonical platforms (Coursera, MIT OCW, edX, O'Reilly, etc.) and prefers platform root URLs over deep links to avoid hallucinated URLs.
+### Conditional Agent 2 (optional optimization)
+For occupations where the empirical data tells a clear, unambiguous story AND the user hasn't added significant custom context, Agent 2 can be skipped entirely. Criteria for skipping:
+- `empirical_baseline_score` ≥ 85 or ≤ 15 (strongly one-directional signal)
+- User did not modify the default O*NET task list on the confirmation screen
+- User did not provide additional context beyond the job title
+- All tasks have β = 1 or all tasks have β = 0 (no mixed signals)
+
+When skipped, the app uses the empirical baseline directly and displays a note: "This score is based entirely on published employment data. For a more personalized assessment, add details about your specific role." This saves one full LLM call (~3–6k tokens) for the most clear-cut cases.
+
+### Agent 3 — Reskilling Advisor (LLM, no tools)
+- **Input:** Risk profile JSON from Agent 2 (or empirical baseline if Agent 2 was skipped) + original job profile from Agent 1 + bundled resource registry (see below)
+- **Tools:** None. `web_search` has been removed to stay within the 75k token ceiling.
+- **Task:** Identify transferable skills the user has, match them to lower-risk jobs, and recommend reskilling resources. The LLM selects from a **bundled resource registry** rather than searching the web at runtime.
 - **Output (JSON):**
 ```json
 {
@@ -77,14 +143,45 @@ Three sequential steps, each passing structured JSON to the next. Agent 1 is a p
     "why_good_fit": string
   }],
   "resources": [{
-    "title": string,
-    "type": "course" | "book" | "platform" | "article",
-    "url": string,
-    "relevance": string
-  }]
+    "registry_id": string,     // references an entry in the bundled registry
+    "relevance": string        // LLM explains why this resource fits
+  }],
+  "meta_skill_recommendation": string
 }
 ```
-- **Cost tradeoff:** `web_search` pulls the full text of each result page into context, so Agent 3 now costs roughly 50–150k input tokens per run instead of ~4–8k. This pushes a single full assessment above the 30k ITPM Tier 1 limit; if you hit rate-limit errors, either upgrade the Anthropic tier or flip `webSearch: false` back off and accept occasional broken deep-links.
+
+#### Bundled Resource Registry
+The old Agent 3 used `web_search` to verify course URLs, which pulled full page content into context (~50–150k tokens per run). This was the single biggest cost driver and made the 75k ceiling impossible to hit.
+
+The replacement is a static JSON registry (`src/data/resources.json`) curated at build time. Each entry has a verified URL, a title, a platform, a skill category, and a set of tags. The LLM's job is to pick relevant entries from the registry and explain their relevance — not to find or verify URLs.
+
+**Registry structure:**
+```json
+[{
+  "id": string,
+  "title": string,
+  "platform": "coursera" | "edx" | "mit_ocw" | "oreilly" | "khan_academy" | "udemy" | "linkedin_learning" | "other",
+  "url": string,              // verified at build time
+  "skill_categories": [string], // e.g. ["data_analysis", "python", "statistics"]
+  "occupational_families": [string], // SOC major groups this is relevant to, e.g. ["15-0000", "13-0000"]
+  "type": "course" | "book" | "platform" | "certification" | "article",
+  "level": "beginner" | "intermediate" | "advanced"
+}]
+```
+
+**How the registry is built:**
+1. Start with a manually curated seed list of ~100–200 high-quality resources across major reskilling pathways (coding, data analysis, project management, healthcare admin, trades, etc.), sourced from Coursera, edX, MIT OCW, O'Reilly, Khan Academy, and LinkedIn Learning.
+2. Verify every URL with a HEAD request in the build script. Drop any that return non-200 status.
+3. Tag each resource with skill categories and relevant SOC major groups.
+4. The registry ships as part of the build output. Refresh periodically (quarterly is fine — course catalogs change slowly).
+
+**How Agent 3 uses it:**
+- Agent 1 passes the SOC code's major group (first 2 digits) to Agent 3 alongside the risk profile.
+- The Agent 3 prompt includes the subset of registry entries whose `occupational_families` match, trimmed to ~50 entries max. At ~100 tokens per entry, this adds ~5k tokens to context — versus 50–150k for `web_search`.
+- The LLM picks 3–6 entries by `id` and writes a `relevance` explanation for each.
+- The UI resolves `registry_id` → full entry (title, URL, platform) at render time.
+
+**Tradeoff:** The resource recommendations are limited to what's in the registry. They won't include niche or newly-launched courses. This is an acceptable tradeoff for a ~10x reduction in token cost. Users who want more specific resources can follow the platform links and browse.
 
 ## User Flow
 1. User enters job title + optional extra context (e.g., "I work in a hospital setting" or "mostly remote, heavy client calls")
@@ -93,11 +190,15 @@ Three sequential steps, each passing structured JSON to the next. Agent 1 is a p
    - **Ambiguous match:** app shows `JobMatchPicker` with the top 5 candidates; user picks one, then task confirmation continues with that choice
    - **No match:** friendly error with "Start over"
 3. User confirms or adjusts task list on the task confirmation screen
-4. Agents 2 and 3 run sequentially (Anthropic API calls)
-5. Results screen shows:
-   - Risk score (0–100 with label)
+4. Agent 1 computes `empirical_baseline_score` from bundled data
+5. If conditional-skip criteria are met and the user hasn't customized: skip Agent 2, use empirical baseline directly
+6. Otherwise: Agent 2 runs, adjusting the empirical baseline with contextual reasoning
+7. Agent 3 runs (Anthropic API call, no tools, selects from bundled resource registry)
+8. Results screen shows:
+   - **Empirical baseline** (from published data) alongside **adjusted score** (from LLM), with clear labels explaining each
    - Timeline chart (Recharts line with confidence band / shaded area)
-   - Per-task breakdown with bottleneck explanations
+   - Per-task breakdown with β scores shown alongside LLM bottleneck assessments
+   - Key empirical context: median wage, BLS projected growth, observed exposure %
    - Reskilling panel with job alternatives and resources
 
 ## Key Files
@@ -105,45 +206,87 @@ Three sequential steps, each passing structured JSON to the next. Agent 1 is a p
 job-risk-calculator/
   data/
     onet-raw/                   # O*NET xlsx download (gitignored — refresh from onetcenter.org)
+    eloundou-beta/              # Eloundou et al. task-level β scores (gitignored — see data sources)
+    economic-index/             # Anthropic Economic Index observed exposure (gitignored)
+    bls-wages/                  # BLS OEWS wage data by SOC (gitignored)
+    bls-projections/            # BLS employment projections 2024–2034 (gitignored)
   scripts/
-    build-onet-data.mjs         # Parses xlsx → src/data/onet.json
+    build-onet-data.mjs         # Parses all data sources → src/data/onet.json
+    build-resources.mjs         # Curates + URL-verifies → src/data/resources.json
   src/
     agents/
       anthropicClient.ts        # Shared fetch wrapper + Zod retry + typed errors
       schemas.ts                # All three Zod schemas in one file
       prompts.ts                # Agent 2 + Agent 3 system prompts
       jobResearcher.ts          # Agent 1 — delegates to src/lib/onet.ts (no LLM)
-      riskScorer.ts             # Agent 2 LLM call
-      reskillingAdvisor.ts      # Agent 3 LLM call
+      empiricalScorer.ts        # Computes empirical_baseline_score from bundled data (no LLM)
+      riskScorer.ts             # Agent 2 LLM call — adjusts empirical baseline
+      reskillingAdvisor.ts      # Agent 3 LLM call — selects from bundled resource registry
     components/
       JobInput.tsx              # Step 1: job title + context form
       JobMatchPicker.tsx        # Step 1b: shown only on ambiguous O*NET matches
-      TaskConfirmation.tsx      # Step 2: confirm/edit O*NET tasks
-      RiskScore.tsx             # Score display + label
+      TaskConfirmation.tsx      # Step 2: confirm/edit O*NET tasks (now shows β per task)
+      RiskScore.tsx             # Score display — shows both empirical baseline and adjusted score
+      EmpiricalContext.tsx      # NEW: displays wage, BLS growth, observed exposure data
       TimelineChart.tsx         # Recharts ComposedChart with sigmoid curve + confidence band
-      TaskBreakdown.tsx         # Per-task bottleneck cards
-      ReskillingPanel.tsx       # Job alternatives + resources
+      TaskBreakdown.tsx         # Per-task bottleneck cards (now shows β alongside LLM scores)
+      ReskillingPanel.tsx       # Job alternatives + resources (resolves registry_id → full entry)
       LoadingState.tsx          # Shared spinner with per-step label
       ErrorState.tsx            # Shared error display with retry
     data/
-      onet.json                 # Generated — 893 occupations, ~13k Core tasks (~3.4 MB / ~850 KB gzipped)
+      onet.json                 # Generated — 893 occupations, ~13k Core tasks, enriched with empirical data
+      resources.json            # Generated — curated resource registry with verified URLs
     lib/
       onet.ts                   # Dynamic-import loader + ranked fuzzy matcher (strong/ambiguous/none)
     types/
       index.ts                  # Shared TypeScript types (z.infer from schemas)
-    App.tsx                     # Step state machine, orchestrates agents
+    App.tsx                     # Step state machine, orchestrates agents (includes conditional skip logic)
     main.tsx
     index.css                   # @import "tailwindcss"
     vite-env.d.ts               # ImportMetaEnv typing
 ```
 
-## Building the O*NET Dataset
-1. Download the O*NET Database (Excel format) from https://www.onetcenter.org/database.html
-2. Extract all xlsx files into `job-risk-calculator/data/onet-raw/`
-3. Run `npm run build:data` — parses `Occupation Data.xlsx`, `Task Statements.xlsx`, `Skills.xlsx`, `Alternate Titles.xlsx`, and `Sample of Reported Titles.xlsx` into `src/data/onet.json`
-4. The raw folder is gitignored; only the generated JSON ships in the repo
+## Building the Enriched Dataset
 
-The build script filters to **Core** tasks only and keeps skills with Importance (IM) score ≥ 3.5. Rerun whenever O*NET ships a new release.
+The build script (`npm run build:data`) merges five data sources into a single `src/data/onet.json`:
+
+### 1. O*NET Database (existing)
+- Download from https://www.onetcenter.org/database.html
+- Extract xlsx files into `data/onet-raw/`
+- Parses `Occupation Data.xlsx`, `Task Statements.xlsx`, `Skills.xlsx`, `Alternate Titles.xlsx`, and `Sample of Reported Titles.xlsx`
+- Filters to **Core** tasks only and keeps skills with Importance (IM) score ≥ 3.5
+
+### 2. Eloundou et al. task-level β scores (new)
+- **Source:** The dataset accompanies the paper "GPTs are GPTs" (Eloundou et al., 2023). Available via the paper's supplementary materials or GitHub.
+- **Join key:** O*NET task ID where available; fall back to fuzzy text match on task descriptions for tasks that don't have exact ID alignment.
+- **What it adds:** A `beta` field (0, 0.5, or 1) on each task, plus an occupation-level `occupation_beta` (employment-weighted average of task betas).
+- Place source files in `data/eloundou-beta/`
+
+### 3. Anthropic Economic Index observed exposure (new)
+- **Source:** https://huggingface.co/datasets/Anthropic/EconomicIndex — published by Massenkoff & McCrory (2026).
+- **Join key:** SOC code (6-digit O*NET-SOC maps to the dataset's occupation codes).
+- **What it adds:** An `observed_exposure` field (0–1) on each occupation representing the share of tasks actually being performed by AI in work-related contexts.
+- Place source files in `data/economic-index/`
+
+### 4. BLS Wage Data (new)
+- **Source:** BLS Occupational Employment and Wage Statistics (OEWS), latest annual release. Download from https://www.bls.gov/oes/tables.htm
+- **Join key:** SOC code.
+- **What it adds:** `median_wage` (annual) on each occupation. The build script also computes `wage_quartile` (1–4) against the full SOC wage distribution.
+- Place source files in `data/bls-wages/`
+
+### 5. BLS Employment Projections (new)
+- **Source:** BLS Employment Projections, 2024–2034. Download from https://www.bls.gov/emp/tables.htm
+- **Join key:** SOC code.
+- **What it adds:** `bls_projected_growth_pct` on each occupation.
+- Place source files in `data/bls-projections/`
+
+### Build process
+1. Download all five data sources into their respective `data/` subdirectories
+2. Run `npm run build:data`
+3. The script joins everything by SOC code, computes derived fields (`wage_quartile`, `exposure_gap`, `empirical_baseline_score`), and writes `src/data/onet.json`
+4. All raw data folders are gitignored; only the generated JSON ships in the repo
+
+Rerun whenever any upstream dataset gets a new release. The Anthropic Economic Index updates periodically; BLS wage data updates annually; BLS projections update roughly every two years; O*NET updates roughly annually.
 
 ## Environment Variables
 ```
@@ -155,36 +298,76 @@ Add `.env` to `.gitignore`. Never commit the API key.
 
 ## Prompting Principles
 - Every agent system prompt must instruct Claude to **return JSON only** — no preamble, no markdown fences
-- Scoring agent system prompt must explicitly define the four bottleneck dimensions (three human-skill bottlenecks plus API migration signal) with examples
+- Agent 2's system prompt must frame the task as **adjustment of an empirical baseline**, not scoring from scratch. The prompt should include the baseline score, explain its components, and ask the model to explain any divergences.
+- Agent 2's system prompt must define the three bottleneck dimensions (novel problem-solving, social/interpersonal, physical dexterity) plus the API migration signal, with examples — but these are used to *explain* adjustments, not to produce the base score.
 - Pass full prior agent output into the next agent's context to maintain coherence
 - Use Zod to parse and validate every agent response; on parse failure, retry the call once before surfacing an error to the user. `anthropicClient.ts` handles this centrally — agents never retry themselves.
 
 ## Empirical Grounding
 
-The scoring and reskilling logic should draw on findings from the Anthropic Economic Index (Massenkoff et al., March 2026):
+The project's scoring methodology draws on two primary sources and two supplementary government datasets:
 
-- **API migration as leading indicator:** Tasks observed migrating from consumer AI use to automated API workflows are empirically associated with more imminent job transformation. This is the fourth scoring dimension in Agent 2.
+### Primary Sources
 
-- **Augmentation/automation spectrum:** The report classifies AI interactions into five types (directive, feedback loop, task iteration, validation, learning). These are more precise and empirically grounded than a binary risk score. Agent 2 tags each task with a `predicted_interaction_type` and returns a top-level `spectrum_summary`.
+**Eloundou et al. (2023) — "GPTs are GPTs: An Early Look at the Labor Market Impact Potential of Large Language Models"**
+- Provides task-level β scores measuring theoretical LLM exposure for every O*NET task
+- β = 1 means an LLM alone can halve the task's completion time; β = 0.5 means it can with additional tooling; β = 0 means it cannot
+- These scores are bundled directly into `onet.json` and passed to Agent 2 as pre-computed data
+- The paper finds ~80% of U.S. workers have at least 10% of tasks exposed; ~19% have over 50% exposed
+- Higher-wage occupations tend to have higher exposure, unlike previous waves of automation technology
 
-- **Wage tier and timeline:** Lower-wage occupations show earlier automation exposure in observed data. Higher-wage occupations are currently in augmentation phases. Agent 2 uses this as a timeline input. (Note: we do NOT bundle wage data in the O*NET JSON — Agent 2 reasons about wage tier from its own knowledge of the SOC occupation passed in `onet_match`.)
+**Massenkoff & McCrory (2026) — "Labor Market Impacts of AI: A New Measure and Early Evidence" (Anthropic Economic Index)**
+- Introduces "observed exposure" — measuring which theoretically-exposed tasks are *actually* being performed by AI in professional settings
+- Key finding: actual AI coverage remains a fraction of theoretical capability (e.g., only 33% coverage in Computer & Math despite 94% theoretical feasibility)
+- Tasks migrating from consumer AI use to automated API workflows are a leading indicator of imminent job transformation — this is operationalized as the API migration signal in Agent 2
+- Lower-wage occupations show earlier automation exposure; higher-wage occupations are currently in augmentation phases — operationalized via the `wage_quartile` field
+- No systematic increase in unemployment for highly exposed workers so far, though tentative evidence of slower hiring for workers aged 22–25 in exposed occupations
+- The report classifies AI interactions into five types (directive, feedback loop, task iteration, validation, learning) — Agent 2 tags each task with a `predicted_interaction_type`
+- High-tenure AI users show ~10% higher conversation success rates independent of task type — Agent 3 recommends AI collaboration skill development as a meta-skill
 
-- **AI collaboration as transferable skill:** High-tenure users show a ~10% higher conversation success rate independent of task type, consistent with learning-by-doing. Agent 3 always recommends AI collaboration skill development as a meta-skill via the `meta_skill_recommendation` field.
+### Supplementary Data
+- **BLS OEWS wage data** — used to compute `wage_quartile` deterministically rather than relying on the LLM's recall of salary data
+- **BLS Employment Projections (2024–2034)** — occupations with higher observed AI exposure tend to have lower projected employment growth (Anthropic report, Figure 4). Bundled as `bls_projected_growth_pct` and displayed alongside AI risk scores to give users a government-sourced employment outlook.
 
-- **Source:** Massenkoff, Lyubich, McCrory, Appel, Heller. "Anthropic Economic Index report: Learning curves." March 24, 2026. https://www.anthropic.com/research/economic-index-march-2026-report
+### What the empirical data does NOT cover
+- **Task reinstatement effects:** Acemoglu & Restrepo (2018, 2019) emphasize that automation also creates new labor-intensive tasks that partially offset displacement. Neither the β scores nor observed exposure capture this. The results screen should note this limitation.
+- **Occupation-specific timelines:** No existing study produces calibrated predictions for *when* a specific occupation will be substantially automated. The timeline estimates from Agent 2 are the LLM's informed judgment, not empirical forecasts. The UI should clearly label them as such.
+- **Non-LLM automation:** The Eloundou et al. β scores and Anthropic Economic Index measure LLM exposure specifically. Robotics, computer vision, and other AI modalities are not captured. Occupations with high physical-task content may face automation pressure from these other technologies that the empirical data here doesn't reflect.
 
 ## Cost / Rate-Limit Notes
-Current token budget per full run:
-- **Agent 1:** 0 tokens (pure code lookup)
-- **Agent 2:** ~3–6k input tokens (no tools)
-- **Agent 3:** ~55–160k input tokens (`web_search` enabled — search results fetch full page content into context)
-- **Total:** ~60–170k input tokens per run
 
-Agent 3's `web_search` is what makes the reskilling resource URLs actually resolve instead of being plausible-looking hallucinations. The downside: a single run can exceed Tier 1's 30k ITPM limit. If you hit rate-limit errors, either upgrade the Anthropic tier or flip `webSearch: false` in `src/agents/reskillingAdvisor.ts` and accept occasional broken deep-links.
+**Hard ceiling: 75k input tokens per full run.**
+
+Current token budget:
+- **Agent 1:** 0 tokens (pure code lookup + empirical scoring)
+- **Agent 2:** ~4–7k input tokens (no tools)
+- **Agent 2 (skipped):** 0 tokens when conditional skip criteria are met
+- **Agent 3:** ~8–15k input tokens (no tools; receives risk profile + ~50 filtered registry entries at ~100 tokens each)
+- **Total:** ~12–22k input tokens per run (well within ceiling)
+
+The old design had Agent 3 using `web_search`, which pulled full page content into context at 50–150k tokens per run — making any token ceiling impossible. Replacing `web_search` with a bundled resource registry drops Agent 3 from the dominant cost driver to a modest call comparable to Agent 2.
+
+**Where the budget goes under worst case (~22k):**
+| Component | Tokens | Notes |
+|-----------|--------|-------|
+| Agent 2 system prompt | ~1.5k | Bottleneck definitions, examples, instructions |
+| Agent 2 user message (job profile + empirical data) | ~3–5k | ~15 tasks × ~200 tokens each + empirical block |
+| Agent 2 output | ~1–2k | Scored tasks + rationales |
+| Agent 3 system prompt | ~1k | Selection instructions |
+| Agent 3 user message (risk profile + registry subset) | ~7–10k | Risk profile (~2k) + ~50 registry entries (~5k) |
+| Agent 3 output | ~1–2k | Selected resources + rationales |
+
+This leaves ~50k tokens of headroom against the 75k ceiling, which provides margin for: unusually large occupations with many tasks, Zod validation retries (each retry re-sends the full prompt), and any future prompt expansion.
+
+**If you need to tighten further:** The registry subset can be filtered more aggressively (by 2-digit SOC group + skill overlap) to send fewer entries to Agent 3. At the extreme, you could pre-compute resource recommendations entirely in code using tag matching and skip Agent 3's LLM call for generic cases — but the LLM's ability to write relevant `why_good_fit` explanations is worth the tokens.
 
 ## Future / v2 Considerations
 - Lightweight backend (Node/Express or FastAPI) to proxy the Anthropic API key before public deployment
 - User accounts + saved results history
 - Export results as PDF
-- Periodic O*NET database refresh (script already supports it via `npm run build:data`)
-- Optional `web_search` on Agent 3 with `max_uses: 1` if resource URLs start hallucinating in practice
+- Periodic refresh of all bundled datasets (script already supports it via `npm run build:data`; add a checklist of upstream release cadences)
+- Expand the resource registry beyond the initial ~100–200 entries; consider scraping course catalogs programmatically at build time with URL verification
+- Validate empirical baseline formula weights against a held-out set of expert-scored occupations
+- Consider bundling Frey & Osborne (2017) automation probabilities as an additional reference point (different methodology, broader automation scope beyond LLMs)
+- Track how often Agent 2 diverges significantly from the empirical baseline — large systematic divergences may indicate the formula weights need recalibration
+- Optional `web_search` toggle for Agent 3 behind a flag, for users on higher API tiers who want broader resource discovery (would blow past the 75k ceiling — document this clearly)
