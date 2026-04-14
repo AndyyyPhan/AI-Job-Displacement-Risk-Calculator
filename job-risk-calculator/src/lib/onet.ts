@@ -5,7 +5,7 @@ interface OnetTask {
   text: string
 }
 
-interface OnetOccupation {
+export interface OnetOccupation {
   code: string
   title: string
   description: string
@@ -21,6 +21,28 @@ interface OnetDataset {
   coreTaskCount: number
   occupations: OnetOccupation[]
 }
+
+export interface RankedMatch {
+  occupation: OnetOccupation
+  score: number
+}
+
+export type OnetMatchResult =
+  | { type: 'strong'; match: RankedMatch }
+  | { type: 'ambiguous'; candidates: RankedMatch[] }
+  | { type: 'none' }
+
+// Anything at or above this normalized score is auto-accepted on its own —
+// it corresponds to exact title / alt-title / reported-title hits in the
+// underlying raw scoring.
+const EXACT_TIER = 0.85
+// Below EXACT_TIER we still auto-accept a strong lead: the top score must
+// clear STRONG_CONFIDENCE and beat the runner-up by at least STRONG_GAP.
+const STRONG_CONFIDENCE = 0.7
+const STRONG_GAP = 0.15
+// Candidates below this confidence are not worth showing in the picker.
+const MIN_CANDIDATE = 0.1
+const MAX_CANDIDATES = 5
 
 let cachedDataset: OnetDataset | null = null
 
@@ -38,22 +60,52 @@ export class OnetNoMatchError extends Error {
   }
 }
 
-export async function findJobProfile(
+export async function matchOnetOccupation(
   jobTitle: string,
-  context?: string,
-): Promise<JobProfile> {
+): Promise<OnetMatchResult> {
   const dataset = await loadDataset()
-  const match = bestMatch(dataset.occupations, jobTitle)
-  if (!match) throw new OnetNoMatchError(jobTitle)
+  const q = normalize(jobTitle)
+  if (!q) return { type: 'none' }
+  const qTokens = tokenize(jobTitle)
 
+  const ranked: RankedMatch[] = dataset.occupations
+    .map((occupation) => ({
+      occupation,
+      score: scoreOccupation(occupation, q, qTokens) / 1000,
+    }))
+    .filter((m) => m.score > 0)
+    .sort((a, b) => b.score - a.score)
+
+  if (ranked.length === 0) return { type: 'none' }
+
+  const top = ranked[0]
+  const runnerUp = ranked[1]?.score ?? 0
+  const isStrong =
+    top.score >= EXACT_TIER ||
+    (top.score >= STRONG_CONFIDENCE && top.score - runnerUp >= STRONG_GAP)
+
+  if (isStrong) return { type: 'strong', match: top }
+
+  const candidates = ranked
+    .filter((m) => m.score >= MIN_CANDIDATE)
+    .slice(0, MAX_CANDIDATES)
+
+  if (candidates.length === 0) return { type: 'none' }
+  return { type: 'ambiguous', candidates }
+}
+
+export function buildJobProfileFromOccupation(
+  occupation: OnetOccupation,
+  context?: string,
+): JobProfile {
   return {
-    job_title: match.title,
-    onet_match: `${match.code} ${match.title}`,
-    tasks: match.tasks.slice(0, 15).map((t) => ({
+    job_title: occupation.title,
+    onet_match: `${occupation.code} ${occupation.title}`,
+    tasks: occupation.tasks.slice(0, 15).map((t) => ({
       name: t.text,
       description: '',
     })),
-    skills: match.skills.slice(0, 12),
+    skills: occupation.skills.slice(0, 12),
     additional_context: context?.trim() ?? '',
   }
 }
@@ -70,28 +122,8 @@ function tokenize(s: string): string[] {
   return normalize(s).split(' ').filter(Boolean)
 }
 
-// Return the single highest-scoring occupation for a free-text job title.
-// Scoring favors, in order:
-//   exact title match → exact alt/reported title → substring match → token overlap.
-function bestMatch(
-  occupations: OnetOccupation[],
-  query: string,
-): OnetOccupation | null {
-  const q = normalize(query)
-  if (!q) return null
-  const qTokens = tokenize(query)
-
-  let best: { occ: OnetOccupation; score: number } | null = null
-
-  for (const occ of occupations) {
-    const score = scoreOccupation(occ, q, qTokens)
-    if (score <= 0) continue
-    if (!best || score > best.score) best = { occ, score }
-  }
-
-  return best?.occ ?? null
-}
-
+// Raw-score hierarchy (returned unnormalized, divided by 1000 by caller):
+//   exact title → exact alt/reported title → substring → token overlap.
 function scoreOccupation(
   occ: OnetOccupation,
   q: string,
@@ -115,7 +147,6 @@ function scoreOccupation(
     if (rep.includes(q)) score = Math.max(score, 450 - (rep.length - q.length))
   }
 
-  // Token overlap fallback: count matching tokens against the title.
   const titleTokens = new Set(tokenize(occ.title))
   let overlap = 0
   for (const t of qTokens) if (titleTokens.has(t)) overlap++

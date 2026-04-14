@@ -40,8 +40,9 @@ export function TaskConfirmation({ profile, onConfirm, onBack }: Props) {
           Is this what you actually do?
         </h1>
         <p className="mt-2 text-slate-600">
-          We found <span className="font-semibold">{profile.onet_match}</span>. Remove
-          anything that doesn't apply to your day-to-day, or add tasks we missed.
+          We matched your job to{' '}
+          <span className="font-semibold text-indigo-700">{profile.onet_match}</span>.
+          Remove anything that doesn't apply to your day-to-day, or add tasks we missed.
         </p>
       </div>
 

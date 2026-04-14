@@ -2,7 +2,7 @@ import type { z, ZodTypeAny } from 'zod'
 
 const API_URL = 'https://api.anthropic.com/v1/messages'
 const MODEL = 'claude-sonnet-4-5'
-const MAX_TOKENS = 2048
+const MAX_TOKENS = 3072
 const WEB_SEARCH_TOOL = {
   type: 'web_search_20250305',
   name: 'web_search',

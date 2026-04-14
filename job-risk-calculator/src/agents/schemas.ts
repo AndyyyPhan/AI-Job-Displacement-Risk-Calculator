@@ -17,6 +17,15 @@ export const bottleneckTypeSchema = z.enum([
   'novel_problem_solving',
   'social_interpersonal',
   'physical_dexterity',
+  'api_migration_signal',
+])
+
+export const interactionTypeSchema = z.enum([
+  'directive',
+  'feedback_loop',
+  'task_iteration',
+  'validation',
+  'learning',
 ])
 
 export const scoredTaskSchema = z.object({
@@ -25,6 +34,7 @@ export const scoredTaskSchema = z.object({
   automation_risk: z.number().min(0).max(100),
   rationale: z.string().min(1),
   bottleneck_types: z.array(bottleneckTypeSchema),
+  predicted_interaction_type: interactionTypeSchema,
 })
 
 export const riskProfileSchema = z.object({
@@ -34,6 +44,7 @@ export const riskProfileSchema = z.object({
   timeline_years_high: z.number().min(0).max(50),
   scored_tasks: z.array(scoredTaskSchema).min(1),
   risk_rationale: z.string().min(1),
+  spectrum_summary: z.string().min(1),
 })
 
 export const recommendedJobSchema = z.object({
@@ -49,8 +60,15 @@ export const resourceSchema = z.object({
   relevance: z.string().min(1),
 })
 
+export const metaSkillRecommendationSchema = z.object({
+  headline: z.string().min(1),
+  rationale: z.string().min(1),
+  resources: z.array(resourceSchema).min(2).max(3),
+})
+
 export const reskillingPlanSchema = z.object({
   transferable_skills: z.array(z.string()).min(1),
   recommended_jobs: z.array(recommendedJobSchema).min(1),
   resources: z.array(resourceSchema).min(1),
+  meta_skill_recommendation: metaSkillRecommendationSchema,
 })

@@ -13,5 +13,6 @@ export async function generateReskillingPlan(
     systemPrompt: RESKILLING_ADVISOR_SYSTEM,
     userMessage,
     schema: reskillingPlanSchema,
+    webSearch: true,
   })
 }

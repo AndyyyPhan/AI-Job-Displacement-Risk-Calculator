@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { JobInput } from './components/JobInput'
+import { JobMatchPicker } from './components/JobMatchPicker'
 import { TaskConfirmation } from './components/TaskConfirmation'
 import { RiskScore } from './components/RiskScore'
 import { TimelineChart } from './components/TimelineChart'
@@ -7,10 +8,11 @@ import { TaskBreakdown } from './components/TaskBreakdown'
 import { ReskillingPanel } from './components/ReskillingPanel'
 import { LoadingState } from './components/LoadingState'
 import { ErrorState } from './components/ErrorState'
-import { researchJob } from './agents/jobResearcher'
+import { finalizeJobResearch, researchJob } from './agents/jobResearcher'
 import { scoreRisk } from './agents/riskScorer'
 import { generateReskillingPlan } from './agents/reskillingAdvisor'
 import { AgentAPIError, AgentValidationError } from './agents/anthropicClient'
+import type { OnetOccupation } from './lib/onet'
 import type { JobProfile, RetryableStep, RiskProfile, Step } from './types'
 
 interface LastInput {
@@ -28,11 +30,28 @@ function App() {
     setLastInput({ jobTitle, context })
     setStep({ kind: 'researching' })
     try {
-      const profile = await researchJob({ jobTitle, context })
-      setStep({ kind: 'confirm', profile })
+      const result = await researchJob({ jobTitle, context })
+      if (result.type === 'strong') {
+        setStep({ kind: 'confirm', profile: result.profile })
+      } else {
+        setStep({
+          kind: 'pickMatch',
+          candidates: result.candidates,
+          query: result.query,
+          context,
+        })
+      }
     } catch (err) {
       setStep(makeErrorStep(err, 'research'))
     }
+  }
+
+  function handleMatchPicked(occupation: OnetOccupation) {
+    setStep((prev) => {
+      if (prev.kind !== 'pickMatch') return prev
+      const profile = finalizeJobResearch(occupation, prev.context)
+      return { kind: 'confirm', profile }
+    })
   }
 
   async function runScoring(profile: JobProfile) {
@@ -91,6 +110,7 @@ function App() {
       <main className="mx-auto max-w-5xl">
         {renderStep(step, {
           onJobSubmit: runResearch,
+          onMatchPicked: handleMatchPicked,
           onTasksConfirmed: runScoring,
           onRetry: handleRetry,
           onStartOver: handleStartOver,
@@ -102,6 +122,7 @@ function App() {
 
 interface Handlers {
   onJobSubmit: (jobTitle: string, context: string) => void
+  onMatchPicked: (occupation: OnetOccupation) => void
   onTasksConfirmed: (profile: JobProfile) => void
   onRetry: () => void
   onStartOver: () => void
@@ -116,6 +137,15 @@ function renderStep(step: Step, h: Handlers) {
         <LoadingState
           label="Researching your job"
           sublabel="Looking up the O*NET entry and scanning the literature…"
+        />
+      )
+    case 'pickMatch':
+      return (
+        <JobMatchPicker
+          query={step.query}
+          candidates={step.candidates}
+          onSelect={h.onMatchPicked}
+          onBack={h.onStartOver}
         />
       )
     case 'confirm':

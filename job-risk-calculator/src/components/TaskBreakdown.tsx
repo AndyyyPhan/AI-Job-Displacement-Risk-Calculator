@@ -36,7 +36,7 @@ export function TaskBreakdown({ tasks }: Props) {
                 {task.bottleneck_types.map((bt) => (
                   <span
                     key={bt}
-                    className="rounded-full bg-indigo-50 px-2.5 py-0.5 text-xs font-medium text-indigo-700"
+                    className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${bottleneckBadgeClasses(bt)}`}
                   >
                     {bottleneckLabel(bt)}
                   </span>
@@ -66,5 +66,12 @@ function bottleneckLabel(bt: BottleneckType): string {
       return 'Social / interpersonal'
     case 'physical_dexterity':
       return 'Physical dexterity'
+    case 'api_migration_signal':
+      return 'Observed API automation'
   }
+}
+
+function bottleneckBadgeClasses(bt: BottleneckType): string {
+  if (bt === 'api_migration_signal') return 'bg-amber-50 text-amber-800'
+  return 'bg-indigo-50 text-indigo-700'
 }

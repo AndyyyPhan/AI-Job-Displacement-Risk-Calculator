@@ -31,7 +31,11 @@ Three sequential steps, each passing structured JSON to the next. Agent 1 is a p
   "additional_context": string
 }
 ```
-- **Failure mode:** if no occupation matches the query, throws `OnetNoMatchError` and the UI shows a friendly error with a "Start over" button.
+- **Match classification:** `matchOnetOccupation()` scores every occupation against the query and normalizes to a 0–1 confidence, then returns one of three result types that drive the UI:
+  - `strong` — top confidence ≥ 0.85 (exact title / alt-title / reported-title hit), **or** top ≥ 0.70 with a ≥ 0.15 lead over the runner-up. The app auto-accepts and proceeds to task confirmation, always showing the matched occupation so the user knows what was selected.
+  - `ambiguous` — at least one candidate with confidence ≥ 0.10 but not strong. The app pauses on a `JobMatchPicker` screen showing the top 5 candidates (title, SOC code, description, alt-titles, confidence) and lets the user pick.
+  - `none` — no occupation scored above zero. The wrapper `researchJob()` throws `OnetNoMatchError` and the UI shows a friendly error with a "Start over" button.
+- Downstream shape is identical on both the strong and ambiguous paths: the chosen occupation is fed through `buildJobProfileFromOccupation()` so Agents 2 and 3 receive the same `JobProfile` JSON regardless of how it was selected.
 
 ### Agent 2 — Risk Scorer (LLM, no tools)
 - **Input:** Job profile JSON from Agent 1
@@ -59,9 +63,9 @@ Three sequential steps, each passing structured JSON to the next. Agent 1 is a p
 }
 ```
 
-### Agent 3 — Reskilling Advisor (LLM, no tools)
+### Agent 3 — Reskilling Advisor (LLM, web_search enabled)
 - **Input:** Risk profile JSON from Agent 2 + original job profile from Agent 1
-- **Tools:** None. Web_search removed — resource URLs come from model memory.
+- **Tools:** `web_search` with `max_uses: 1`. Used to verify deep-link URLs (Coursera slugs, edX course IDs, etc.) before including them in the plan. Without it, the model hallucinates plausible-looking URLs that 404.
 - **Task:** Identify transferable skills the user has, match them to lower-risk jobs, and recommend reskilling resources. The prompt explicitly steers the model toward canonical platforms (Coursera, MIT OCW, edX, O'Reilly, etc.) and prefers platform root URLs over deep links to avoid hallucinated URLs.
 - **Output (JSON):**
 ```json
@@ -80,12 +84,15 @@ Three sequential steps, each passing structured JSON to the next. Agent 1 is a p
   }]
 }
 ```
-- **Known tradeoff:** without `web_search`, some resource URLs may be slightly wrong. If that becomes a problem, flip `webSearch: true` in `src/agents/reskillingAdvisor.ts` — the client already supports it (`max_uses: 1`).
+- **Cost tradeoff:** `web_search` pulls the full text of each result page into context, so Agent 3 now costs roughly 50–150k input tokens per run instead of ~4–8k. This pushes a single full assessment above the 30k ITPM Tier 1 limit; if you hit rate-limit errors, either upgrade the Anthropic tier or flip `webSearch: false` back off and accept occasional broken deep-links.
 
 ## User Flow
 1. User enters job title + optional extra context (e.g., "I work in a hospital setting" or "mostly remote, heavy client calls")
-2. Agent 1 looks up the O*NET entry from bundled JSON (instant) → app shows the matched tasks and asks user to confirm/edit ("Is this what you actually do?")
-3. User confirms or adjusts task list
+2. Agent 1 classifies the match:
+   - **Strong match:** app jumps straight to task confirmation, surfacing the matched occupation ("We matched your job to: *29-1224.00 Radiologists*")
+   - **Ambiguous match:** app shows `JobMatchPicker` with the top 5 candidates; user picks one, then task confirmation continues with that choice
+   - **No match:** friendly error with "Start over"
+3. User confirms or adjusts task list on the task confirmation screen
 4. Agents 2 and 3 run sequentially (Anthropic API calls)
 5. Results screen shows:
    - Risk score (0–100 with label)
@@ -110,6 +117,7 @@ job-risk-calculator/
       reskillingAdvisor.ts      # Agent 3 LLM call
     components/
       JobInput.tsx              # Step 1: job title + context form
+      JobMatchPicker.tsx        # Step 1b: shown only on ambiguous O*NET matches
       TaskConfirmation.tsx      # Step 2: confirm/edit O*NET tasks
       RiskScore.tsx             # Score display + label
       TimelineChart.tsx         # Recharts ComposedChart with sigmoid curve + confidence band
@@ -120,7 +128,7 @@ job-risk-calculator/
     data/
       onet.json                 # Generated — 893 occupations, ~13k Core tasks (~3.4 MB / ~850 KB gzipped)
     lib/
-      onet.ts                   # Dynamic-import loader + fuzzy title matcher
+      onet.ts                   # Dynamic-import loader + ranked fuzzy matcher (strong/ambiguous/none)
     types/
       index.ts                  # Shared TypeScript types (z.infer from schemas)
     App.tsx                     # Step state machine, orchestrates agents
@@ -147,18 +155,32 @@ Add `.env` to `.gitignore`. Never commit the API key.
 
 ## Prompting Principles
 - Every agent system prompt must instruct Claude to **return JSON only** — no preamble, no markdown fences
-- Scoring agent system prompt must explicitly define the three bottleneck dimensions with examples
+- Scoring agent system prompt must explicitly define the four bottleneck dimensions (three human-skill bottlenecks plus API migration signal) with examples
 - Pass full prior agent output into the next agent's context to maintain coherence
 - Use Zod to parse and validate every agent response; on parse failure, retry the call once before surfacing an error to the user. `anthropicClient.ts` handles this centrally — agents never retry themselves.
+
+## Empirical Grounding
+
+The scoring and reskilling logic should draw on findings from the Anthropic Economic Index (Massenkoff et al., March 2026):
+
+- **API migration as leading indicator:** Tasks observed migrating from consumer AI use to automated API workflows are empirically associated with more imminent job transformation. This is the fourth scoring dimension in Agent 2.
+
+- **Augmentation/automation spectrum:** The report classifies AI interactions into five types (directive, feedback loop, task iteration, validation, learning). These are more precise and empirically grounded than a binary risk score. Agent 2 tags each task with a `predicted_interaction_type` and returns a top-level `spectrum_summary`.
+
+- **Wage tier and timeline:** Lower-wage occupations show earlier automation exposure in observed data. Higher-wage occupations are currently in augmentation phases. Agent 2 uses this as a timeline input. (Note: we do NOT bundle wage data in the O*NET JSON — Agent 2 reasons about wage tier from its own knowledge of the SOC occupation passed in `onet_match`.)
+
+- **AI collaboration as transferable skill:** High-tenure users show a ~10% higher conversation success rate independent of task type, consistent with learning-by-doing. Agent 3 always recommends AI collaboration skill development as a meta-skill via the `meta_skill_recommendation` field.
+
+- **Source:** Massenkoff, Lyubich, McCrory, Appel, Heller. "Anthropic Economic Index report: Learning curves." March 24, 2026. https://www.anthropic.com/research/economic-index-march-2026-report
 
 ## Cost / Rate-Limit Notes
 Current token budget per full run:
 - **Agent 1:** 0 tokens (pure code lookup)
-- **Agent 2:** ~3–6k input tokens
-- **Agent 3:** ~4–8k input tokens
-- **Total:** ~10–15k input tokens per run
+- **Agent 2:** ~3–6k input tokens (no tools)
+- **Agent 3:** ~55–160k input tokens (`web_search` enabled — search results fetch full page content into context)
+- **Total:** ~60–170k input tokens per run
 
-This fits comfortably under Tier 1 Anthropic limits (30k ITPM). If you re-enable `web_search` anywhere, expect 50k–150k extra input tokens per call because search results fetch full page content into context.
+Agent 3's `web_search` is what makes the reskilling resource URLs actually resolve instead of being plausible-looking hallucinations. The downside: a single run can exceed Tier 1's 30k ITPM limit. If you hit rate-limit errors, either upgrade the Anthropic tier or flip `webSearch: false` in `src/agents/reskillingAdvisor.ts` and accept occasional broken deep-links.
 
 ## Future / v2 Considerations
 - Lightweight backend (Node/Express or FastAPI) to proxy the Anthropic API key before public deployment

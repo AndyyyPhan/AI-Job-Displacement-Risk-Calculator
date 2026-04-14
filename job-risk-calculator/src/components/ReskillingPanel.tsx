@@ -5,11 +5,43 @@ interface Props {
 }
 
 export function ReskillingPanel({ plan }: Props) {
+  const meta = plan.meta_skill_recommendation
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
       <h2 className="text-xl font-semibold text-slate-900">Your reskilling playbook</h2>
 
-      <section className="mt-6">
+      <section className="mt-6 rounded-xl border border-indigo-200 bg-indigo-50/60 p-5">
+        <p className="text-xs font-semibold uppercase tracking-wide text-indigo-700">
+          Meta-skill · learn to work with AI
+        </p>
+        <p className="mt-2 text-base font-semibold text-slate-900">{meta.headline}</p>
+        <p className="mt-2 text-sm leading-relaxed text-slate-700">{meta.rationale}</p>
+        <ul className="mt-4 space-y-2">
+          {meta.resources.map((r) => (
+            <li
+              key={r.url}
+              className="rounded-lg border border-indigo-100 bg-white p-3"
+            >
+              <div className="flex items-baseline justify-between gap-3">
+                <a
+                  href={r.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-medium text-indigo-700 hover:underline"
+                >
+                  {r.title}
+                </a>
+                <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-medium uppercase text-indigo-700">
+                  {typeLabel(r.type)}
+                </span>
+              </div>
+              <p className="mt-1 text-sm text-slate-600">{r.relevance}</p>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <section className="mt-8">
         <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
           Skills that transfer
         </h3>
