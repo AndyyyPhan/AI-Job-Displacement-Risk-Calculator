@@ -1,0 +1,3 @@
+Anthropic Economic Index observed-exposure data (Massenkoff & McCrory 2026).
+Download from: https://huggingface.co/datasets/Anthropic/EconomicIndex
+Expected file: CSV or JSON with columns (SOC code, observed_exposure).

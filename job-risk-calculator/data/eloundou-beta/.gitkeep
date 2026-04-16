@@ -1,0 +1,3 @@
+Eloundou et al. (2023) task-level β scores.
+Download from: paper supplementary materials / GitHub for "GPTs are GPTs".
+Expected file: CSV or JSON with columns (O*NET Task ID, task description, beta).

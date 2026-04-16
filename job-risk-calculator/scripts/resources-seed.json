@@ -1,0 +1,952 @@
+[
+  {
+    "id": "anthropic-docs",
+    "title": "Anthropic Documentation (Claude API and prompting)",
+    "platform": "anthropic_docs",
+    "url": "https://docs.anthropic.com/",
+    "skill_categories": ["ai_collaboration", "prompting", "llm_usage"],
+    "occupational_families": ["11-0000", "13-0000", "15-0000", "17-0000", "19-0000", "21-0000", "23-0000", "25-0000", "27-0000", "29-0000", "31-0000", "33-0000", "35-0000", "37-0000", "39-0000", "41-0000", "43-0000", "45-0000", "47-0000", "49-0000", "51-0000", "53-0000"],
+    "type": "platform",
+    "level": "intermediate"
+  },
+  {
+    "id": "anthropic-prompt-engineering",
+    "title": "Claude prompt engineering overview (Anthropic docs)",
+    "platform": "anthropic_docs",
+    "url": "https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/overview",
+    "skill_categories": ["ai_collaboration", "prompting"],
+    "occupational_families": ["11-0000", "13-0000", "15-0000", "25-0000", "27-0000"],
+    "type": "article",
+    "level": "beginner"
+  },
+  {
+    "id": "deeplearning-ai-home",
+    "title": "DeepLearning.AI — short courses in AI, LLMs, and prompting",
+    "platform": "deeplearning_ai",
+    "url": "https://www.deeplearning.ai/",
+    "skill_categories": ["ai_collaboration", "machine_learning", "prompting"],
+    "occupational_families": ["11-0000", "13-0000", "15-0000", "17-0000", "19-0000", "25-0000"],
+    "type": "platform",
+    "level": "beginner"
+  },
+  {
+    "id": "deeplearning-ai-short-courses",
+    "title": "DeepLearning.AI short courses catalog",
+    "platform": "deeplearning_ai",
+    "url": "https://www.deeplearning.ai/short-courses/",
+    "skill_categories": ["ai_collaboration", "prompting", "llm_usage"],
+    "occupational_families": ["11-0000", "13-0000", "15-0000", "25-0000", "27-0000"],
+    "type": "course",
+    "level": "beginner"
+  },
+  {
+    "id": "coursera-home",
+    "title": "Coursera (general catalog)",
+    "platform": "coursera",
+    "url": "https://www.coursera.org/",
+    "skill_categories": ["general_education"],
+    "occupational_families": ["11-0000", "13-0000", "15-0000", "17-0000", "19-0000", "21-0000", "23-0000", "25-0000", "27-0000", "29-0000", "31-0000", "33-0000", "35-0000", "37-0000", "39-0000", "41-0000", "43-0000", "45-0000", "47-0000", "49-0000", "51-0000", "53-0000"],
+    "type": "platform",
+    "level": "beginner"
+  },
+  {
+    "id": "edx-home",
+    "title": "edX (general catalog)",
+    "platform": "edx",
+    "url": "https://www.edx.org/",
+    "skill_categories": ["general_education"],
+    "occupational_families": ["11-0000", "13-0000", "15-0000", "17-0000", "19-0000", "21-0000", "23-0000", "25-0000", "27-0000", "29-0000", "31-0000", "33-0000", "35-0000", "37-0000", "39-0000", "41-0000", "43-0000", "45-0000", "47-0000", "49-0000", "51-0000", "53-0000"],
+    "type": "platform",
+    "level": "beginner"
+  },
+  {
+    "id": "mit-ocw-home",
+    "title": "MIT OpenCourseWare (free MIT course materials)",
+    "platform": "mit_ocw",
+    "url": "https://ocw.mit.edu/",
+    "skill_categories": ["general_education", "computer_science", "engineering", "mathematics"],
+    "occupational_families": ["11-0000", "13-0000", "15-0000", "17-0000", "19-0000", "25-0000"],
+    "type": "platform",
+    "level": "intermediate"
+  },
+  {
+    "id": "khan-academy-home",
+    "title": "Khan Academy (free K-16 education)",
+    "platform": "khan_academy",
+    "url": "https://www.khanacademy.org/",
+    "skill_categories": ["general_education", "mathematics", "statistics"],
+    "occupational_families": ["11-0000", "13-0000", "15-0000", "19-0000", "25-0000", "43-0000"],
+    "type": "platform",
+    "level": "beginner"
+  },
+  {
+    "id": "oreilly-home",
+    "title": "O'Reilly Learning Platform",
+    "platform": "oreilly",
+    "url": "https://www.oreilly.com/",
+    "skill_categories": ["software_engineering", "data_analysis", "cloud", "ai_collaboration"],
+    "occupational_families": ["13-0000", "15-0000", "17-0000", "19-0000"],
+    "type": "platform",
+    "level": "intermediate"
+  },
+  {
+    "id": "linkedin-learning-home",
+    "title": "LinkedIn Learning (professional skill courses)",
+    "platform": "linkedin_learning",
+    "url": "https://www.linkedin.com/learning/",
+    "skill_categories": ["project_management", "communication", "leadership", "data_analysis"],
+    "occupational_families": ["11-0000", "13-0000", "41-0000", "43-0000"],
+    "type": "platform",
+    "level": "beginner"
+  },
+  {
+    "id": "coursera-andrew-ng-ml",
+    "title": "Machine Learning Specialization by Andrew Ng (Coursera)",
+    "platform": "coursera",
+    "url": "https://www.coursera.org/specializations/machine-learning-introduction",
+    "skill_categories": ["machine_learning", "python", "mathematics"],
+    "occupational_families": ["15-0000", "17-0000", "19-0000"],
+    "type": "course",
+    "level": "beginner"
+  },
+  {
+    "id": "coursera-google-data-analytics",
+    "title": "Google Data Analytics Professional Certificate (Coursera)",
+    "platform": "coursera",
+    "url": "https://www.coursera.org/professional-certificates/google-data-analytics",
+    "skill_categories": ["data_analysis", "sql", "spreadsheets", "visualization"],
+    "occupational_families": ["13-0000", "15-0000", "43-0000"],
+    "type": "certification",
+    "level": "beginner"
+  },
+  {
+    "id": "coursera-google-project-management",
+    "title": "Google Project Management Professional Certificate (Coursera)",
+    "platform": "coursera",
+    "url": "https://www.coursera.org/professional-certificates/google-project-management",
+    "skill_categories": ["project_management", "agile", "communication"],
+    "occupational_families": ["11-0000", "13-0000", "43-0000"],
+    "type": "certification",
+    "level": "beginner"
+  },
+  {
+    "id": "coursera-google-ux-design",
+    "title": "Google UX Design Professional Certificate (Coursera)",
+    "platform": "coursera",
+    "url": "https://www.coursera.org/professional-certificates/google-ux-design",
+    "skill_categories": ["ux_design", "user_research", "prototyping"],
+    "occupational_families": ["15-0000", "27-0000"],
+    "type": "certification",
+    "level": "beginner"
+  },
+  {
+    "id": "coursera-ibm-data-science",
+    "title": "IBM Data Science Professional Certificate (Coursera)",
+    "platform": "coursera",
+    "url": "https://www.coursera.org/professional-certificates/ibm-data-science",
+    "skill_categories": ["data_analysis", "python", "machine_learning"],
+    "occupational_families": ["13-0000", "15-0000", "19-0000"],
+    "type": "certification",
+    "level": "beginner"
+  },
+  {
+    "id": "coursera-meta-front-end",
+    "title": "Meta Front-End Developer Professional Certificate (Coursera)",
+    "platform": "coursera",
+    "url": "https://www.coursera.org/professional-certificates/meta-front-end-developer",
+    "skill_categories": ["software_engineering", "web_development", "javascript", "react"],
+    "occupational_families": ["15-0000"],
+    "type": "certification",
+    "level": "beginner"
+  },
+  {
+    "id": "coursera-ai-for-everyone",
+    "title": "AI For Everyone by Andrew Ng (Coursera)",
+    "platform": "coursera",
+    "url": "https://www.coursera.org/learn/ai-for-everyone",
+    "skill_categories": ["ai_collaboration", "ai_literacy"],
+    "occupational_families": ["11-0000", "13-0000", "15-0000", "17-0000", "19-0000", "21-0000", "23-0000", "25-0000", "27-0000", "29-0000", "31-0000", "33-0000", "35-0000", "37-0000", "39-0000", "41-0000", "43-0000"],
+    "type": "course",
+    "level": "beginner"
+  },
+  {
+    "id": "coursera-python-for-everybody",
+    "title": "Python for Everybody Specialization (Coursera, University of Michigan)",
+    "platform": "coursera",
+    "url": "https://www.coursera.org/specializations/python",
+    "skill_categories": ["python", "programming", "data_analysis"],
+    "occupational_families": ["13-0000", "15-0000", "19-0000"],
+    "type": "course",
+    "level": "beginner"
+  },
+  {
+    "id": "coursera-excel-to-mysql",
+    "title": "Excel to MySQL: Analytic Techniques for Business Specialization (Coursera)",
+    "platform": "coursera",
+    "url": "https://www.coursera.org/specializations/excel-mysql",
+    "skill_categories": ["sql", "data_analysis", "spreadsheets"],
+    "occupational_families": ["13-0000", "43-0000"],
+    "type": "course",
+    "level": "beginner"
+  },
+  {
+    "id": "coursera-healthcare-administration",
+    "title": "Healthcare Organization Operations Specialization (Coursera, Rutgers)",
+    "platform": "coursera",
+    "url": "https://www.coursera.org/specializations/healthcare-organization-operations",
+    "skill_categories": ["healthcare_administration", "operations"],
+    "occupational_families": ["11-0000", "29-0000", "31-0000"],
+    "type": "course",
+    "level": "intermediate"
+  },
+  {
+    "id": "coursera-nursing-assistant",
+    "title": "Foundations for Assisting in Home Care (Coursera, State University of New York)",
+    "platform": "coursera",
+    "url": "https://www.coursera.org/learn/home-care",
+    "skill_categories": ["patient_care", "healthcare"],
+    "occupational_families": ["29-0000", "31-0000", "39-0000"],
+    "type": "course",
+    "level": "beginner"
+  },
+  {
+    "id": "edx-harvard-cs50",
+    "title": "CS50: Introduction to Computer Science (Harvard, edX)",
+    "platform": "edx",
+    "url": "https://www.edx.org/cs50",
+    "skill_categories": ["computer_science", "programming", "python"],
+    "occupational_families": ["15-0000", "17-0000", "25-0000"],
+    "type": "course",
+    "level": "beginner"
+  },
+  {
+    "id": "edx-mitx-6001",
+    "title": "Introduction to Computer Science and Programming Using Python (MITx, edX)",
+    "platform": "edx",
+    "url": "https://www.edx.org/learn/computer-science/massachusetts-institute-of-technology-introduction-to-computer-science-and-programming-using-python",
+    "skill_categories": ["python", "programming", "computer_science"],
+    "occupational_families": ["15-0000", "17-0000", "19-0000"],
+    "type": "course",
+    "level": "beginner"
+  },
+  {
+    "id": "edx-statistics-r",
+    "title": "Statistics and R (HarvardX, edX)",
+    "platform": "edx",
+    "url": "https://www.edx.org/learn/r-programming/harvard-university-statistics-and-r",
+    "skill_categories": ["statistics", "r", "data_analysis"],
+    "occupational_families": ["13-0000", "15-0000", "19-0000"],
+    "type": "course",
+    "level": "intermediate"
+  },
+  {
+    "id": "edx-sql-for-data-science",
+    "title": "SQL for Data Science (edX)",
+    "platform": "edx",
+    "url": "https://www.edx.org/learn/sql",
+    "skill_categories": ["sql", "data_analysis"],
+    "occupational_families": ["13-0000", "15-0000", "43-0000"],
+    "type": "course",
+    "level": "beginner"
+  },
+  {
+    "id": "mit-ocw-intro-to-cs",
+    "title": "6.0001 Introduction to Computer Science and Programming in Python (MIT OCW)",
+    "platform": "mit_ocw",
+    "url": "https://ocw.mit.edu/courses/6-0001-introduction-to-computer-science-and-programming-in-python-fall-2016/",
+    "skill_categories": ["python", "programming", "computer_science"],
+    "occupational_families": ["15-0000", "17-0000"],
+    "type": "course",
+    "level": "beginner"
+  },
+  {
+    "id": "mit-ocw-linear-algebra",
+    "title": "18.06 Linear Algebra by Gilbert Strang (MIT OCW)",
+    "platform": "mit_ocw",
+    "url": "https://ocw.mit.edu/courses/18-06-linear-algebra-spring-2010/",
+    "skill_categories": ["mathematics", "linear_algebra"],
+    "occupational_families": ["15-0000", "17-0000", "19-0000"],
+    "type": "course",
+    "level": "intermediate"
+  },
+  {
+    "id": "mit-ocw-intro-to-probability",
+    "title": "6.041 Probabilistic Systems Analysis and Applied Probability (MIT OCW)",
+    "platform": "mit_ocw",
+    "url": "https://ocw.mit.edu/courses/6-041-probabilistic-systems-analysis-and-applied-probability-fall-2010/",
+    "skill_categories": ["statistics", "probability", "mathematics"],
+    "occupational_families": ["13-0000", "15-0000", "19-0000"],
+    "type": "course",
+    "level": "intermediate"
+  },
+  {
+    "id": "mit-ocw-accounting",
+    "title": "15.501 Introduction to Financial and Managerial Accounting (MIT OCW)",
+    "platform": "mit_ocw",
+    "url": "https://ocw.mit.edu/courses/15-501-introduction-to-financial-and-managerial-accounting-spring-2004/",
+    "skill_categories": ["accounting", "finance"],
+    "occupational_families": ["11-0000", "13-0000", "43-0000"],
+    "type": "course",
+    "level": "intermediate"
+  },
+  {
+    "id": "mit-ocw-management",
+    "title": "15.311 Organizational Processes (MIT OCW)",
+    "platform": "mit_ocw",
+    "url": "https://ocw.mit.edu/courses/15-311-organizational-processes-spring-2009/",
+    "skill_categories": ["management", "leadership", "organizations"],
+    "occupational_families": ["11-0000", "13-0000"],
+    "type": "course",
+    "level": "intermediate"
+  },
+  {
+    "id": "khan-academy-statistics",
+    "title": "Statistics and probability (Khan Academy)",
+    "platform": "khan_academy",
+    "url": "https://www.khanacademy.org/math/statistics-probability",
+    "skill_categories": ["statistics", "probability", "mathematics"],
+    "occupational_families": ["13-0000", "15-0000", "19-0000", "25-0000"],
+    "type": "course",
+    "level": "beginner"
+  },
+  {
+    "id": "khan-academy-economics",
+    "title": "Macroeconomics and Microeconomics (Khan Academy)",
+    "platform": "khan_academy",
+    "url": "https://www.khanacademy.org/economics-finance-domain",
+    "skill_categories": ["economics", "finance"],
+    "occupational_families": ["11-0000", "13-0000", "19-0000", "25-0000"],
+    "type": "course",
+    "level": "beginner"
+  },
+  {
+    "id": "khan-academy-personal-finance",
+    "title": "Personal finance (Khan Academy)",
+    "platform": "khan_academy",
+    "url": "https://www.khanacademy.org/college-careers-more/personal-finance",
+    "skill_categories": ["personal_finance", "financial_literacy"],
+    "occupational_families": ["11-0000", "13-0000", "41-0000"],
+    "type": "course",
+    "level": "beginner"
+  },
+  {
+    "id": "coursera-negotiation-intro",
+    "title": "Successful Negotiation: Essential Strategies and Skills (Coursera, University of Michigan)",
+    "platform": "coursera",
+    "url": "https://www.coursera.org/learn/negotiation-skills",
+    "skill_categories": ["negotiation", "communication", "soft_skills"],
+    "occupational_families": ["11-0000", "13-0000", "23-0000", "41-0000"],
+    "type": "course",
+    "level": "beginner"
+  },
+  {
+    "id": "coursera-learning-how-to-learn",
+    "title": "Learning How to Learn (Coursera, UC San Diego)",
+    "platform": "coursera",
+    "url": "https://www.coursera.org/learn/learning-how-to-learn",
+    "skill_categories": ["meta_learning", "study_skills", "soft_skills"],
+    "occupational_families": ["11-0000", "13-0000", "15-0000", "17-0000", "19-0000", "21-0000", "23-0000", "25-0000", "27-0000", "29-0000", "31-0000"],
+    "type": "course",
+    "level": "beginner"
+  },
+  {
+    "id": "coursera-financial-markets-shiller",
+    "title": "Financial Markets by Robert Shiller (Coursera, Yale)",
+    "platform": "coursera",
+    "url": "https://www.coursera.org/learn/financial-markets-global",
+    "skill_categories": ["finance", "economics"],
+    "occupational_families": ["11-0000", "13-0000"],
+    "type": "course",
+    "level": "intermediate"
+  },
+  {
+    "id": "coursera-agile-with-atlassian",
+    "title": "Agile with Atlassian Jira (Coursera)",
+    "platform": "coursera",
+    "url": "https://www.coursera.org/learn/agile-atlassian-jira",
+    "skill_categories": ["agile", "project_management", "scrum"],
+    "occupational_families": ["11-0000", "13-0000", "15-0000"],
+    "type": "course",
+    "level": "beginner"
+  },
+  {
+    "id": "coursera-teacher-skills",
+    "title": "Foundations of Teaching for Learning Specialization (Coursera, Commonwealth Education Trust)",
+    "platform": "coursera",
+    "url": "https://www.coursera.org/specializations/foundations-teaching-learning",
+    "skill_categories": ["teaching", "pedagogy", "instructional_design"],
+    "occupational_families": ["25-0000"],
+    "type": "course",
+    "level": "beginner"
+  },
+  {
+    "id": "coursera-graphic-design",
+    "title": "Graphic Design Specialization (Coursera, CalArts)",
+    "platform": "coursera",
+    "url": "https://www.coursera.org/specializations/graphic-design",
+    "skill_categories": ["graphic_design", "visual_design", "creative"],
+    "occupational_families": ["27-0000"],
+    "type": "course",
+    "level": "beginner"
+  },
+  {
+    "id": "coursera-content-strategy",
+    "title": "Content Strategy for Professionals Specialization (Coursera, Northwestern)",
+    "platform": "coursera",
+    "url": "https://www.coursera.org/specializations/content-strategy",
+    "skill_categories": ["content_strategy", "writing", "marketing"],
+    "occupational_families": ["27-0000", "41-0000"],
+    "type": "course",
+    "level": "intermediate"
+  },
+  {
+    "id": "coursera-social-psychology",
+    "title": "Social Psychology (Coursera, Wesleyan University)",
+    "platform": "coursera",
+    "url": "https://www.coursera.org/learn/social-psychology",
+    "skill_categories": ["psychology", "social_skills", "communication"],
+    "occupational_families": ["21-0000", "25-0000", "27-0000", "39-0000"],
+    "type": "course",
+    "level": "beginner"
+  },
+  {
+    "id": "coursera-epidemiology",
+    "title": "Epidemiology: The Basic Science of Public Health (Coursera, UNC)",
+    "platform": "coursera",
+    "url": "https://www.coursera.org/learn/epidemiology",
+    "skill_categories": ["public_health", "epidemiology", "statistics"],
+    "occupational_families": ["19-0000", "21-0000", "29-0000"],
+    "type": "course",
+    "level": "intermediate"
+  },
+  {
+    "id": "coursera-patient-safety",
+    "title": "The Science of Safety in Healthcare (Coursera, Johns Hopkins)",
+    "platform": "coursera",
+    "url": "https://www.coursera.org/learn/patient-safety",
+    "skill_categories": ["healthcare", "patient_safety", "quality_improvement"],
+    "occupational_families": ["29-0000", "31-0000"],
+    "type": "course",
+    "level": "intermediate"
+  },
+  {
+    "id": "coursera-clinical-terminology",
+    "title": "Clinical Terminology for International and U.S. Students (Coursera, University of Pittsburgh)",
+    "platform": "coursera",
+    "url": "https://www.coursera.org/learn/clinical-terminology",
+    "skill_categories": ["healthcare", "medical_terminology"],
+    "occupational_families": ["29-0000", "31-0000", "43-0000"],
+    "type": "course",
+    "level": "beginner"
+  },
+  {
+    "id": "coursera-fundamentals-of-nursing",
+    "title": "The Fundamentals of Nursing: Caring for People (Coursera, Ruppin Academic Center)",
+    "platform": "coursera",
+    "url": "https://www.coursera.org/learn/the-fundamentals-of-nursing-theory",
+    "skill_categories": ["nursing", "patient_care", "healthcare"],
+    "occupational_families": ["29-0000", "31-0000"],
+    "type": "course",
+    "level": "beginner"
+  },
+  {
+    "id": "coursera-data-viz-tableau",
+    "title": "Data Visualization with Tableau Specialization (Coursera, UC Davis)",
+    "platform": "coursera",
+    "url": "https://www.coursera.org/specializations/data-visualization",
+    "skill_categories": ["data_visualization", "tableau", "data_analysis"],
+    "occupational_families": ["13-0000", "15-0000", "19-0000"],
+    "type": "course",
+    "level": "beginner"
+  },
+  {
+    "id": "coursera-marketing-analytics",
+    "title": "Marketing Analytics Specialization (Coursera, University of Virginia)",
+    "platform": "coursera",
+    "url": "https://www.coursera.org/specializations/marketing-analytics",
+    "skill_categories": ["marketing", "data_analysis", "business"],
+    "occupational_families": ["11-0000", "13-0000", "41-0000"],
+    "type": "course",
+    "level": "intermediate"
+  },
+  {
+    "id": "coursera-supply-chain",
+    "title": "Supply Chain Management Specialization (Coursera, Rutgers)",
+    "platform": "coursera",
+    "url": "https://www.coursera.org/specializations/supply-chain-management",
+    "skill_categories": ["supply_chain", "logistics", "operations"],
+    "occupational_families": ["11-0000", "13-0000", "43-0000", "53-0000"],
+    "type": "course",
+    "level": "intermediate"
+  },
+  {
+    "id": "coursera-business-foundations",
+    "title": "Business Foundations Specialization (Coursera, Wharton)",
+    "platform": "coursera",
+    "url": "https://www.coursera.org/specializations/wharton-business-foundations",
+    "skill_categories": ["business", "management", "finance", "marketing"],
+    "occupational_families": ["11-0000", "13-0000"],
+    "type": "course",
+    "level": "beginner"
+  },
+  {
+    "id": "coursera-entrepreneurship",
+    "title": "Entrepreneurship Specialization (Coursera, Wharton)",
+    "platform": "coursera",
+    "url": "https://www.coursera.org/specializations/wharton-entrepreneurship",
+    "skill_categories": ["entrepreneurship", "business", "strategy"],
+    "occupational_families": ["11-0000", "13-0000", "41-0000"],
+    "type": "course",
+    "level": "intermediate"
+  },
+  {
+    "id": "coursera-writing-in-sciences",
+    "title": "Writing in the Sciences (Coursera, Stanford)",
+    "platform": "coursera",
+    "url": "https://www.coursera.org/learn/sciwrite",
+    "skill_categories": ["writing", "communication", "research"],
+    "occupational_families": ["19-0000", "25-0000", "27-0000", "29-0000"],
+    "type": "course",
+    "level": "intermediate"
+  },
+  {
+    "id": "deeplearning-ai-chatgpt-prompt",
+    "title": "ChatGPT Prompt Engineering for Developers (DeepLearning.AI)",
+    "platform": "deeplearning_ai",
+    "url": "https://learn.deeplearning.ai/chatgpt-prompt-eng",
+    "skill_categories": ["ai_collaboration", "prompting", "llm_usage"],
+    "occupational_families": ["13-0000", "15-0000", "25-0000", "27-0000"],
+    "type": "course",
+    "level": "beginner"
+  },
+  {
+    "id": "deeplearning-ai-building-with-claude",
+    "title": "DeepLearning.AI — Building with the Claude API short courses",
+    "platform": "deeplearning_ai",
+    "url": "https://www.deeplearning.ai/courses/",
+    "skill_categories": ["ai_collaboration", "llm_usage", "software_engineering"],
+    "occupational_families": ["15-0000", "17-0000"],
+    "type": "course",
+    "level": "intermediate"
+  },
+  {
+    "id": "edx-electrical-engineering-intro",
+    "title": "Circuits and Electronics (MITx, edX)",
+    "platform": "edx",
+    "url": "https://www.edx.org/learn/circuits/massachusetts-institute-of-technology-circuits-and-electronics-1-basic-circuit-analysis",
+    "skill_categories": ["electrical_engineering", "circuits"],
+    "occupational_families": ["17-0000", "47-0000", "49-0000"],
+    "type": "course",
+    "level": "intermediate"
+  },
+  {
+    "id": "edx-architecture-intro",
+    "title": "Architectural Imagination (HarvardX, edX)",
+    "platform": "edx",
+    "url": "https://www.edx.org/learn/architecture/harvard-university-the-architectural-imagination",
+    "skill_categories": ["architecture", "design"],
+    "occupational_families": ["17-0000", "27-0000"],
+    "type": "course",
+    "level": "beginner"
+  },
+  {
+    "id": "edx-climate-change",
+    "title": "Making Sense of Climate Science Denial (UQx, edX)",
+    "platform": "edx",
+    "url": "https://www.edx.org/learn/climate-change/the-university-of-queensland-making-sense-of-climate-science-denial",
+    "skill_categories": ["environmental_science", "climate", "communication"],
+    "occupational_families": ["19-0000", "25-0000"],
+    "type": "course",
+    "level": "beginner"
+  },
+  {
+    "id": "oreilly-designing-data-intensive",
+    "title": "Designing Data-Intensive Applications by Martin Kleppmann (O'Reilly)",
+    "platform": "oreilly",
+    "url": "https://www.oreilly.com/library/view/designing-data-intensive-applications/9781491903063/",
+    "skill_categories": ["software_engineering", "distributed_systems", "databases"],
+    "occupational_families": ["15-0000"],
+    "type": "book",
+    "level": "advanced"
+  },
+  {
+    "id": "oreilly-fluent-python",
+    "title": "Fluent Python by Luciano Ramalho (O'Reilly)",
+    "platform": "oreilly",
+    "url": "https://www.oreilly.com/library/view/fluent-python-2nd/9781492056348/",
+    "skill_categories": ["python", "programming"],
+    "occupational_families": ["15-0000"],
+    "type": "book",
+    "level": "intermediate"
+  },
+  {
+    "id": "oreilly-hands-on-ml",
+    "title": "Hands-On Machine Learning with Scikit-Learn, Keras, and TensorFlow (O'Reilly)",
+    "platform": "oreilly",
+    "url": "https://www.oreilly.com/library/view/hands-on-machine-learning/9781098125967/",
+    "skill_categories": ["machine_learning", "python", "data_science"],
+    "occupational_families": ["15-0000", "19-0000"],
+    "type": "book",
+    "level": "intermediate"
+  },
+  {
+    "id": "coursera-google-cybersecurity",
+    "title": "Google Cybersecurity Professional Certificate (Coursera)",
+    "platform": "coursera",
+    "url": "https://www.coursera.org/professional-certificates/google-cybersecurity",
+    "skill_categories": ["cybersecurity", "networking", "it"],
+    "occupational_families": ["15-0000", "33-0000"],
+    "type": "certification",
+    "level": "beginner"
+  },
+  {
+    "id": "coursera-google-it-support",
+    "title": "Google IT Support Professional Certificate (Coursera)",
+    "platform": "coursera",
+    "url": "https://www.coursera.org/professional-certificates/google-it-support",
+    "skill_categories": ["it_support", "troubleshooting", "networking"],
+    "occupational_families": ["15-0000", "43-0000", "49-0000"],
+    "type": "certification",
+    "level": "beginner"
+  },
+  {
+    "id": "coursera-intro-to-coding",
+    "title": "Code Yourself! An Introduction to Programming (Coursera, University of Edinburgh)",
+    "platform": "coursera",
+    "url": "https://www.coursera.org/learn/intro-programming",
+    "skill_categories": ["programming", "computer_science"],
+    "occupational_families": ["15-0000", "43-0000"],
+    "type": "course",
+    "level": "beginner"
+  },
+  {
+    "id": "coursera-resilience",
+    "title": "Positive Psychiatry and Mental Health (Coursera, University of Sydney)",
+    "platform": "coursera",
+    "url": "https://www.coursera.org/learn/positive-psychiatry",
+    "skill_categories": ["mental_health", "wellness", "psychology"],
+    "occupational_families": ["21-0000", "29-0000", "31-0000"],
+    "type": "course",
+    "level": "beginner"
+  },
+  {
+    "id": "coursera-intercultural-communication",
+    "title": "Intercultural Communication and Conflict Resolution (Coursera, UC Irvine)",
+    "platform": "coursera",
+    "url": "https://www.coursera.org/learn/intercultural-communication",
+    "skill_categories": ["communication", "negotiation", "cultural_competence"],
+    "occupational_families": ["11-0000", "21-0000", "23-0000", "27-0000"],
+    "type": "course",
+    "level": "beginner"
+  },
+  {
+    "id": "coursera-google-ads",
+    "title": "Google Digital Marketing & E-commerce Professional Certificate (Coursera)",
+    "platform": "coursera",
+    "url": "https://www.coursera.org/professional-certificates/google-digital-marketing-ecommerce",
+    "skill_categories": ["marketing", "digital_marketing", "analytics"],
+    "occupational_families": ["13-0000", "27-0000", "41-0000"],
+    "type": "certification",
+    "level": "beginner"
+  },
+  {
+    "id": "coursera-excel",
+    "title": "Excel Skills for Business Specialization (Coursera, Macquarie University)",
+    "platform": "coursera",
+    "url": "https://www.coursera.org/specializations/excel",
+    "skill_categories": ["excel", "spreadsheets", "data_analysis"],
+    "occupational_families": ["13-0000", "43-0000"],
+    "type": "course",
+    "level": "beginner"
+  },
+  {
+    "id": "coursera-english-business",
+    "title": "Business English Communication Skills Specialization (Coursera, University of Washington)",
+    "platform": "coursera",
+    "url": "https://www.coursera.org/specializations/business-english",
+    "skill_categories": ["communication", "business_english", "writing"],
+    "occupational_families": ["11-0000", "13-0000", "27-0000", "41-0000", "43-0000"],
+    "type": "course",
+    "level": "beginner"
+  },
+  {
+    "id": "coursera-bookkeeping",
+    "title": "Intuit Bookkeeping Professional Certificate (Coursera)",
+    "platform": "coursera",
+    "url": "https://www.coursera.org/professional-certificates/intuit-bookkeeping",
+    "skill_categories": ["bookkeeping", "accounting", "finance"],
+    "occupational_families": ["13-0000", "43-0000"],
+    "type": "certification",
+    "level": "beginner"
+  },
+  {
+    "id": "coursera-cognitive-behavioral-therapy",
+    "title": "Foundations of Cognitive Behavioral Therapy (Coursera)",
+    "platform": "coursera",
+    "url": "https://www.coursera.org/learn/cbt-foundations-addictions-mental-health",
+    "skill_categories": ["mental_health", "therapy", "counseling"],
+    "occupational_families": ["21-0000", "29-0000"],
+    "type": "course",
+    "level": "intermediate"
+  },
+  {
+    "id": "coursera-public-speaking",
+    "title": "Dynamic Public Speaking Specialization (Coursera, University of Washington)",
+    "platform": "coursera",
+    "url": "https://www.coursera.org/specializations/public-speaking",
+    "skill_categories": ["public_speaking", "communication", "presentation"],
+    "occupational_families": ["11-0000", "25-0000", "27-0000", "41-0000"],
+    "type": "course",
+    "level": "beginner"
+  },
+  {
+    "id": "coursera-creative-writing",
+    "title": "Creative Writing Specialization (Coursera, Wesleyan)",
+    "platform": "coursera",
+    "url": "https://www.coursera.org/specializations/creative-writing",
+    "skill_categories": ["creative_writing", "writing", "storytelling"],
+    "occupational_families": ["25-0000", "27-0000"],
+    "type": "course",
+    "level": "beginner"
+  },
+  {
+    "id": "coursera-music-production",
+    "title": "Music Production Specialization (Coursera, Berklee)",
+    "platform": "coursera",
+    "url": "https://www.coursera.org/specializations/music-production",
+    "skill_categories": ["music", "audio_production", "creative"],
+    "occupational_families": ["27-0000"],
+    "type": "course",
+    "level": "beginner"
+  },
+  {
+    "id": "coursera-graphic-design-adobe",
+    "title": "Adobe Graphic Designer Professional Certificate (Coursera)",
+    "platform": "coursera",
+    "url": "https://www.coursera.org/professional-certificates/adobe-graphic-designer",
+    "skill_categories": ["graphic_design", "adobe", "creative"],
+    "occupational_families": ["27-0000"],
+    "type": "certification",
+    "level": "beginner"
+  },
+  {
+    "id": "coursera-hospitality-management",
+    "title": "International Hospitality & Healthcare Services Marketing (Coursera, Yonsei)",
+    "platform": "coursera",
+    "url": "https://www.coursera.org/learn/hospitality-management",
+    "skill_categories": ["hospitality", "marketing", "service_management"],
+    "occupational_families": ["11-0000", "35-0000", "39-0000"],
+    "type": "course",
+    "level": "beginner"
+  },
+  {
+    "id": "coursera-food-safety",
+    "title": "Foodborne Microbial Pathogens (Coursera, University of Buffalo)",
+    "platform": "coursera",
+    "url": "https://www.coursera.org/learn/foodborne-pathogens",
+    "skill_categories": ["food_safety", "public_health"],
+    "occupational_families": ["29-0000", "35-0000"],
+    "type": "course",
+    "level": "intermediate"
+  },
+  {
+    "id": "coursera-legal-writing",
+    "title": "Introduction to Legal Writing (Coursera)",
+    "platform": "coursera",
+    "url": "https://www.coursera.org/learn/legal-writing",
+    "skill_categories": ["legal_writing", "writing"],
+    "occupational_families": ["23-0000"],
+    "type": "course",
+    "level": "intermediate"
+  },
+  {
+    "id": "coursera-intro-to-law",
+    "title": "An Introduction to American Law (Coursera, UPenn)",
+    "platform": "coursera",
+    "url": "https://www.coursera.org/learn/american-law",
+    "skill_categories": ["law", "legal_studies"],
+    "occupational_families": ["23-0000"],
+    "type": "course",
+    "level": "beginner"
+  },
+  {
+    "id": "coursera-becoming-a-teacher",
+    "title": "Teach English Now! Foundational Principles (Coursera, Arizona State)",
+    "platform": "coursera",
+    "url": "https://www.coursera.org/learn/tesol",
+    "skill_categories": ["teaching", "tesol", "esl"],
+    "occupational_families": ["25-0000"],
+    "type": "course",
+    "level": "beginner"
+  },
+  {
+    "id": "coursera-construction-management",
+    "title": "Construction Management Specialization (Coursera, Columbia)",
+    "platform": "coursera",
+    "url": "https://www.coursera.org/specializations/construction-management",
+    "skill_categories": ["construction", "project_management", "engineering"],
+    "occupational_families": ["11-0000", "17-0000", "47-0000"],
+    "type": "course",
+    "level": "intermediate"
+  },
+  {
+    "id": "coursera-hvac",
+    "title": "Building Science Education courses catalog (Coursera)",
+    "platform": "coursera",
+    "url": "https://www.coursera.org/search?query=hvac",
+    "skill_categories": ["hvac", "building_science", "trades"],
+    "occupational_families": ["47-0000", "49-0000"],
+    "type": "platform",
+    "level": "beginner"
+  },
+  {
+    "id": "khan-academy-art-history",
+    "title": "Art history (Khan Academy)",
+    "platform": "khan_academy",
+    "url": "https://www.khanacademy.org/humanities/art-history",
+    "skill_categories": ["art_history", "humanities"],
+    "occupational_families": ["25-0000", "27-0000"],
+    "type": "course",
+    "level": "beginner"
+  },
+  {
+    "id": "khan-academy-biology",
+    "title": "Biology (Khan Academy)",
+    "platform": "khan_academy",
+    "url": "https://www.khanacademy.org/science/biology",
+    "skill_categories": ["biology", "science"],
+    "occupational_families": ["19-0000", "25-0000", "29-0000"],
+    "type": "course",
+    "level": "beginner"
+  },
+  {
+    "id": "khan-academy-chemistry",
+    "title": "Chemistry (Khan Academy)",
+    "platform": "khan_academy",
+    "url": "https://www.khanacademy.org/science/chemistry",
+    "skill_categories": ["chemistry", "science"],
+    "occupational_families": ["19-0000", "25-0000", "29-0000"],
+    "type": "course",
+    "level": "beginner"
+  },
+  {
+    "id": "khan-academy-computer-programming",
+    "title": "Computer programming (Khan Academy)",
+    "platform": "khan_academy",
+    "url": "https://www.khanacademy.org/computing/computer-programming",
+    "skill_categories": ["programming", "javascript", "computer_science"],
+    "occupational_families": ["15-0000", "25-0000"],
+    "type": "course",
+    "level": "beginner"
+  },
+  {
+    "id": "linkedin-project-management-foundations",
+    "title": "LinkedIn Learning — Project Management Foundations course catalog",
+    "platform": "linkedin_learning",
+    "url": "https://www.linkedin.com/learning/topics/project-management",
+    "skill_categories": ["project_management", "leadership"],
+    "occupational_families": ["11-0000", "13-0000"],
+    "type": "course",
+    "level": "beginner"
+  },
+  {
+    "id": "linkedin-data-analysis-topic",
+    "title": "LinkedIn Learning — Data Analysis topic page",
+    "platform": "linkedin_learning",
+    "url": "https://www.linkedin.com/learning/topics/data-analysis",
+    "skill_categories": ["data_analysis", "business_intelligence"],
+    "occupational_families": ["13-0000", "15-0000", "43-0000"],
+    "type": "course",
+    "level": "beginner"
+  },
+  {
+    "id": "linkedin-excel-topic",
+    "title": "LinkedIn Learning — Microsoft Excel topic page",
+    "platform": "linkedin_learning",
+    "url": "https://www.linkedin.com/learning/topics/microsoft-excel",
+    "skill_categories": ["excel", "spreadsheets", "data_analysis"],
+    "occupational_families": ["13-0000", "43-0000"],
+    "type": "course",
+    "level": "beginner"
+  },
+  {
+    "id": "coursera-critical-thinking",
+    "title": "Logical and Critical Thinking (Coursera, University of Auckland)",
+    "platform": "coursera",
+    "url": "https://www.coursera.org/learn/logical-critical-thinking",
+    "skill_categories": ["critical_thinking", "reasoning", "meta_learning"],
+    "occupational_families": ["11-0000", "13-0000", "15-0000", "17-0000", "19-0000", "21-0000", "23-0000", "25-0000", "27-0000", "29-0000"],
+    "type": "course",
+    "level": "beginner"
+  },
+  {
+    "id": "coursera-model-thinking",
+    "title": "Model Thinking (Coursera, University of Michigan)",
+    "platform": "coursera",
+    "url": "https://www.coursera.org/learn/model-thinking",
+    "skill_categories": ["modeling", "decision_making", "reasoning"],
+    "occupational_families": ["11-0000", "13-0000", "15-0000", "19-0000"],
+    "type": "course",
+    "level": "intermediate"
+  },
+  {
+    "id": "coursera-gamification",
+    "title": "Gamification (Coursera, UPenn Wharton)",
+    "platform": "coursera",
+    "url": "https://www.coursera.org/learn/gamification",
+    "skill_categories": ["product_design", "behavioral_design"],
+    "occupational_families": ["11-0000", "15-0000", "27-0000"],
+    "type": "course",
+    "level": "intermediate"
+  },
+  {
+    "id": "coursera-medical-neuroscience",
+    "title": "Medical Neuroscience (Coursera, Duke)",
+    "platform": "coursera",
+    "url": "https://www.coursera.org/learn/medical-neuroscience",
+    "skill_categories": ["neuroscience", "medicine"],
+    "occupational_families": ["19-0000", "29-0000"],
+    "type": "course",
+    "level": "advanced"
+  },
+  {
+    "id": "coursera-inspiring-leadership",
+    "title": "Inspiring Leadership through Emotional Intelligence (Coursera, CWRU)",
+    "platform": "coursera",
+    "url": "https://www.coursera.org/learn/emotional-intelligence-leadership",
+    "skill_categories": ["leadership", "emotional_intelligence", "management"],
+    "occupational_families": ["11-0000", "13-0000", "21-0000", "29-0000"],
+    "type": "course",
+    "level": "beginner"
+  },
+  {
+    "id": "coursera-gmat",
+    "title": "GMAT Complete Prep (Coursera)",
+    "platform": "coursera",
+    "url": "https://www.coursera.org/learn/gmat-test-prep",
+    "skill_categories": ["test_prep", "quantitative_reasoning"],
+    "occupational_families": ["11-0000", "13-0000"],
+    "type": "course",
+    "level": "intermediate"
+  },
+  {
+    "id": "coursera-manufacturing-process",
+    "title": "Digital Manufacturing & Design Specialization (Coursera, University at Buffalo)",
+    "platform": "coursera",
+    "url": "https://www.coursera.org/specializations/digital-manufacturing-design-technology",
+    "skill_categories": ["manufacturing", "engineering", "design"],
+    "occupational_families": ["17-0000", "51-0000"],
+    "type": "course",
+    "level": "intermediate"
+  },
+  {
+    "id": "coursera-logistics",
+    "title": "Supply Chain Logistics (Coursera, Rutgers)",
+    "platform": "coursera",
+    "url": "https://www.coursera.org/learn/supply-chain-logistics",
+    "skill_categories": ["logistics", "supply_chain"],
+    "occupational_families": ["11-0000", "13-0000", "43-0000", "53-0000"],
+    "type": "course",
+    "level": "beginner"
+  }
+]

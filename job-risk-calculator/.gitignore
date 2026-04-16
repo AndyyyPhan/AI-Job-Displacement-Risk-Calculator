@@ -19,6 +19,16 @@ dist-ssr
 
 # O*NET raw database (download from onetcenter.org/database.html)
 data/onet-raw/
+# Upstream empirical datasets merged at build time. Directories are tracked via .gitkeep
+# but all contents are ignored until the real downloads land.
+data/eloundou-beta/*
+!data/eloundou-beta/.gitkeep
+data/economic-index/*
+!data/economic-index/.gitkeep
+data/bls-wages/*
+!data/bls-wages/.gitkeep
+data/bls-projections/*
+!data/bls-projections/.gitkeep
 
 # Editor directories and files
 .vscode/*
