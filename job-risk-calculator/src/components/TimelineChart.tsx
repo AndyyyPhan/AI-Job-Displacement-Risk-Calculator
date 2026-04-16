@@ -105,7 +105,7 @@ interface CurvePoint {
 }
 
 function buildCurve(risk: RiskProfile): CurvePoint[] {
-  const target = risk.overall_risk_score
+  const target = risk.adjusted_risk_score
   const high = Math.max(risk.timeline_years_high, risk.timeline_years_low + 1, 1)
   const points: CurvePoint[] = []
 

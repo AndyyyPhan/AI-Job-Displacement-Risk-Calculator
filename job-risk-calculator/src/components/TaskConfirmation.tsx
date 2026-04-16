@@ -1,29 +1,44 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import type { JobProfile, JobTask } from '../types'
 
 interface Props {
   profile: JobProfile
-  onConfirm: (updatedProfile: JobProfile) => void
+  onConfirm: (updatedProfile: JobProfile, userCustomizedTasks: boolean) => void
   onBack: () => void
 }
 
 export function TaskConfirmation({ profile, onConfirm, onBack }: Props) {
   const [tasks, setTasks] = useState<JobTask[]>(profile.tasks)
   const [draftName, setDraftName] = useState('')
+  const [customized, setCustomized] = useState(false)
+  const originalTasksRef = useRef(profile.tasks)
+
+  function markCustomized() {
+    if (!customized) setCustomized(true)
+  }
 
   function removeTask(index: number) {
+    markCustomized()
     setTasks((prev) => prev.filter((_, i) => i !== index))
   }
 
   function addTask() {
     const name = draftName.trim()
     if (!name) return
-    setTasks((prev) => [...prev, { name, description: name }])
+    markCustomized()
+    setTasks((prev) => [
+      ...prev,
+      { name, description: name, beta: profile.empirical.occupation_beta },
+    ])
     setDraftName('')
   }
 
   function handleConfirm() {
-    onConfirm({ ...profile, tasks })
+    const wasCustomized =
+      customized ||
+      tasks.length !== originalTasksRef.current.length ||
+      tasks.some((t, i) => t.name !== originalTasksRef.current[i]?.name)
+    onConfirm({ ...profile, tasks }, wasCustomized)
   }
 
   return (
@@ -54,7 +69,7 @@ export function TaskConfirmation({ profile, onConfirm, onBack }: Props) {
           >
             <div className="flex-1">
               <p className="font-medium text-slate-900">{task.name}</p>
-              {task.description && (
+              {task.description && task.description !== task.name && (
                 <p className="mt-1 text-sm text-slate-600">{task.description}</p>
               )}
             </div>

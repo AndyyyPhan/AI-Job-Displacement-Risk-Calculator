@@ -17,7 +17,7 @@ export function TaskBreakdown({ tasks }: Props) {
           <li key={`${task.name}-${i}`} className="space-y-2">
             <div className="flex items-baseline justify-between gap-4">
               <p className="font-medium text-slate-900">{task.name}</p>
-              <span className="text-sm font-semibold tabular-nums text-slate-600">
+              <span className="shrink-0 text-sm font-semibold tabular-nums text-slate-600">
                 {Math.round(task.automation_risk)}% risk
               </span>
             </div>

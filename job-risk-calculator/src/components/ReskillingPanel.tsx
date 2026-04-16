@@ -1,11 +1,20 @@
-import type { ReskillingPlan, Resource } from '../types'
+import type {
+  ResourceRegistryEntry,
+  ResourceSelection,
+  ReskillingPlan,
+} from '../types'
+import { resolveRegistryId } from '../lib/resourceRegistry'
 
 interface Props {
   plan: ReskillingPlan
+  registry: ResourceRegistryEntry[]
 }
 
-export function ReskillingPanel({ plan }: Props) {
+export function ReskillingPanel({ plan, registry }: Props) {
   const meta = plan.meta_skill_recommendation
+  const metaEntries = resolveSelections(meta.resources, registry)
+  const resourceEntries = resolveSelections(plan.resources, registry)
+
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
       <h2 className="text-xl font-semibold text-slate-900">Your reskilling playbook</h2>
@@ -17,25 +26,12 @@ export function ReskillingPanel({ plan }: Props) {
         <p className="mt-2 text-base font-semibold text-slate-900">{meta.headline}</p>
         <p className="mt-2 text-sm leading-relaxed text-slate-700">{meta.rationale}</p>
         <ul className="mt-4 space-y-2">
-          {meta.resources.map((r) => (
+          {metaEntries.map(({ selection, entry }) => (
             <li
-              key={r.url}
+              key={selection.registry_id}
               className="rounded-lg border border-indigo-100 bg-white p-3"
             >
-              <div className="flex items-baseline justify-between gap-3">
-                <a
-                  href={r.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="font-medium text-indigo-700 hover:underline"
-                >
-                  {r.title}
-                </a>
-                <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-medium uppercase text-indigo-700">
-                  {typeLabel(r.type)}
-                </span>
-              </div>
-              <p className="mt-1 text-sm text-slate-600">{r.relevance}</p>
+              <ResourceRow entry={entry} relevance={selection.relevance} />
             </li>
           ))}
         </ul>
@@ -84,22 +80,9 @@ export function ReskillingPanel({ plan }: Props) {
           Reskilling resources
         </h3>
         <ul className="mt-3 space-y-3">
-          {plan.resources.map((r) => (
-            <li key={r.url} className="rounded-xl border border-slate-200 p-4">
-              <div className="flex items-baseline justify-between gap-3">
-                <a
-                  href={r.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="font-medium text-indigo-700 hover:underline"
-                >
-                  {r.title}
-                </a>
-                <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium uppercase text-slate-600">
-                  {typeLabel(r.type)}
-                </span>
-              </div>
-              <p className="mt-1 text-sm text-slate-600">{r.relevance}</p>
+          {resourceEntries.map(({ selection, entry }) => (
+            <li key={selection.registry_id} className="rounded-xl border border-slate-200 p-4">
+              <ResourceRow entry={entry} relevance={selection.relevance} />
             </li>
           ))}
         </ul>
@@ -108,15 +91,82 @@ export function ReskillingPanel({ plan }: Props) {
   )
 }
 
-function typeLabel(type: Resource['type']): string {
-  switch (type) {
-    case 'course':
-      return 'Course'
-    case 'book':
-      return 'Book'
-    case 'platform':
-      return 'Platform'
-    case 'article':
-      return 'Article'
+interface ResolvedResource {
+  selection: ResourceSelection
+  entry: ResourceRegistryEntry
+}
+
+function resolveSelections(
+  selections: ResourceSelection[],
+  registry: ResourceRegistryEntry[],
+): ResolvedResource[] {
+  const resolved: ResolvedResource[] = []
+  for (const selection of selections) {
+    const entry = resolveRegistryId(registry, selection.registry_id)
+    if (!entry) {
+      console.warn(
+        `[ReskillingPanel] registry_id "${selection.registry_id}" not found in bundled registry; skipping`,
+      )
+      continue
+    }
+    resolved.push({ selection, entry })
+  }
+  return resolved
+}
+
+function ResourceRow({
+  entry,
+  relevance,
+}: {
+  entry: ResourceRegistryEntry
+  relevance: string
+}) {
+  return (
+    <>
+      <div className="flex items-baseline justify-between gap-3">
+        <a
+          href={entry.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="font-medium text-indigo-700 hover:underline"
+        >
+          {entry.title}
+        </a>
+        <span className="flex shrink-0 items-center gap-1.5">
+          <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium uppercase text-slate-600">
+            {platformLabel(entry.platform)}
+          </span>
+          <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium uppercase text-slate-600">
+            {entry.type}
+          </span>
+        </span>
+      </div>
+      <p className="mt-1 text-sm text-slate-600">{relevance}</p>
+    </>
+  )
+}
+
+function platformLabel(platform: ResourceRegistryEntry['platform']): string {
+  switch (platform) {
+    case 'coursera':
+      return 'Coursera'
+    case 'edx':
+      return 'edX'
+    case 'mit_ocw':
+      return 'MIT OCW'
+    case 'oreilly':
+      return "O'Reilly"
+    case 'khan_academy':
+      return 'Khan Academy'
+    case 'udemy':
+      return 'Udemy'
+    case 'linkedin_learning':
+      return 'LinkedIn Learning'
+    case 'anthropic_docs':
+      return 'Anthropic Docs'
+    case 'deeplearning_ai':
+      return 'DeepLearning.AI'
+    case 'other':
+      return 'Other'
   }
 }

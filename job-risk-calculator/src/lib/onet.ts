@@ -1,8 +1,10 @@
-import type { JobProfile } from '../types'
+import type { EmpiricalInputs, JobProfile } from '../types'
+import { enrichEmpiricalContext } from '../agents/empiricalScorer'
 
 interface OnetTask {
   id: number | null
   text: string
+  beta?: number
 }
 
 export interface OnetOccupation {
@@ -13,6 +15,7 @@ export interface OnetOccupation {
   reportedTitles: string[]
   tasks: OnetTask[]
   skills: string[]
+  empirical?: EmpiricalInputs
 }
 
 interface OnetDataset {
@@ -94,19 +97,57 @@ export async function matchOnetOccupation(
   return { type: 'ambiguous', candidates }
 }
 
+export function getSocMajorGroup(code: string): string {
+  const prefix = code.slice(0, 2)
+  return `${prefix}-0000`
+}
+
+// Used when onet.json was generated before the empirical data pipeline was
+// in place. Produces a neutral but realistic empirical block so the app still
+// renders end-to-end. Once real data is bundled by build-onet-data.mjs, every
+// occupation ships with its own empirical inputs and this fallback stops firing.
+function fallbackEmpiricalInputs(): EmpiricalInputs {
+  return {
+    occupation_beta: 0.5,
+    observed_exposure: 0.3,
+    exposure_gap: 0.2,
+    median_wage: 55000,
+    wage_quartile: 3,
+    bls_projected_growth_pct: 3,
+    fallback_fields: [
+      'occupation_beta',
+      'observed_exposure',
+      'exposure_gap',
+      'median_wage',
+      'wage_quartile',
+      'bls_projected_growth_pct',
+    ],
+  }
+}
+
+function resolveTaskBeta(task: OnetTask): number {
+  if (typeof task.beta === 'number') return task.beta
+  return 0.5
+}
+
 export function buildJobProfileFromOccupation(
   occupation: OnetOccupation,
   context?: string,
 ): JobProfile {
+  const inputs: EmpiricalInputs = occupation.empirical ?? fallbackEmpiricalInputs()
+  const empirical = enrichEmpiricalContext(inputs)
   return {
     job_title: occupation.title,
     onet_match: `${occupation.code} ${occupation.title}`,
+    soc_major_group: getSocMajorGroup(occupation.code),
     tasks: occupation.tasks.slice(0, 15).map((t) => ({
       name: t.text,
       description: '',
+      beta: resolveTaskBeta(t),
     })),
     skills: occupation.skills.slice(0, 12),
     additional_context: context?.trim() ?? '',
+    empirical,
   }
 }
 

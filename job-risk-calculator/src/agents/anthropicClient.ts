@@ -3,11 +3,6 @@ import type { z, ZodTypeAny } from 'zod'
 const API_URL = 'https://api.anthropic.com/v1/messages'
 const MODEL = 'claude-sonnet-4-5'
 const MAX_TOKENS = 3072
-const WEB_SEARCH_TOOL = {
-  type: 'web_search_20250305',
-  name: 'web_search',
-  max_uses: 1,
-} as const
 
 export class AgentValidationError extends Error {
   readonly agent: string
@@ -51,7 +46,6 @@ interface CallOptions<S extends ZodTypeAny> {
   systemPrompt: string
   userMessage: string
   schema: S
-  webSearch?: boolean
 }
 
 export async function callAgent<S extends ZodTypeAny>(
@@ -98,9 +92,6 @@ async function postMessage<S extends ZodTypeAny>(
     max_tokens: MAX_TOKENS,
     system: opts.systemPrompt,
     messages,
-  }
-  if (opts.webSearch) {
-    body.tools = [WEB_SEARCH_TOOL]
   }
 
   const response = await fetch(API_URL, {

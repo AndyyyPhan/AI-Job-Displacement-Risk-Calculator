@@ -8,10 +8,14 @@ interface Props {
 type SpectrumZone = 'augmentation' | 'mixed' | 'automation'
 
 export function RiskScore({ risk, jobTitle }: Props) {
-  const score = Math.round(risk.overall_risk_score)
-  const label = scoreLabel(score)
-  const color = scoreColor(score)
-  const spectrum = computeSpectrum(risk.scored_tasks.map((t) => t.predicted_interaction_type))
+  const adjusted = Math.round(risk.adjusted_risk_score)
+  const baseline = Math.round(risk.empirical_baseline_score)
+  const delta = adjusted - baseline
+  const label = scoreLabel(adjusted)
+  const color = scoreColor(adjusted)
+  const spectrum = computeSpectrum(
+    risk.scored_tasks.map((t) => t.predicted_interaction_type),
+  )
 
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
@@ -21,42 +25,97 @@ export function RiskScore({ risk, jobTitle }: Props) {
 
       {spectrum && (
         <div className="mt-4">
-          <p className="text-lg leading-relaxed text-slate-800">
-            {risk.spectrum_summary}
+          <p className="text-lg leading-relaxed text-slate-800">{risk.spectrum_summary}</p>
+          <p className="mt-4 text-xs text-slate-500">
+            Where this job falls between humans using AI as a tool (augmentation) and AI
+            replacing human tasks (automation).
           </p>
           <SpectrumBar zone={spectrum.zone} automationShare={spectrum.automationShare} />
         </div>
       )}
 
-      <div className="mt-6 flex items-center justify-between gap-6 rounded-xl bg-slate-50 px-4 py-3">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-            Overall risk score
+      <div className="mt-6 grid gap-4 sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] sm:items-stretch">
+        <div className="rounded-xl border border-slate-200 bg-slate-50 px-5 py-4">
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+            Empirical baseline
           </p>
-          <div className="mt-1 flex items-baseline gap-2">
-            <span className="text-3xl font-bold tabular-nums" style={{ color }}>
-              {score}
+          <p className="text-[11px] text-slate-400">from published data</p>
+          <div className="mt-2 flex items-baseline gap-2">
+            <span className="text-3xl font-bold tabular-nums text-slate-700">
+              {baseline}
             </span>
             <span className="text-sm text-slate-500">/ 100</span>
-            <span className="ml-2 text-sm font-semibold" style={{ color }}>
+          </div>
+          <p className="mt-1 text-[11px] leading-snug text-slate-500">
+            Derived from Eloundou et al. β, Anthropic Economic Index observed exposure, BLS
+            wage quartile, and BLS 2024–2034 projected growth.
+          </p>
+        </div>
+
+        <div className="hidden items-center justify-center sm:flex">
+          <DeltaArrow delta={delta} />
+        </div>
+
+        <div
+          className="rounded-xl border px-5 py-4"
+          style={{ borderColor: color, backgroundColor: `${color}0F` }}
+        >
+          <p className="text-[11px] font-semibold uppercase tracking-wide" style={{ color }}>
+            Adjusted risk score
+          </p>
+          <p className="text-[11px] text-slate-500">personalized for your role</p>
+          <div className="mt-2 flex items-baseline gap-2">
+            <span className="text-4xl font-bold tabular-nums" style={{ color }}>
+              {adjusted}
+            </span>
+            <span className="text-sm text-slate-500">/ 100</span>
+            <span className="text-sm font-semibold" style={{ color }}>
               {label}
             </span>
           </div>
-        </div>
-        <div className="text-right">
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-            Displacement window
+          <p className="mt-1 text-[11px] leading-snug text-slate-500">
+            Displacement window: {risk.timeline_years_low}–{risk.timeline_years_high} years ·
+            {' '}
+            {risk.timeline_category}
           </p>
-          <p className="mt-1 text-sm font-medium text-slate-900">
-            {risk.timeline_years_low}–{risk.timeline_years_high} years
-          </p>
-          <p className="text-xs text-slate-500">({risk.timeline_category})</p>
         </div>
       </div>
 
-      <p className="mt-4 text-sm leading-relaxed text-slate-700">
-        {risk.risk_rationale}
-      </p>
+      <section className="mt-5 rounded-xl bg-slate-50 p-4">
+        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+          How the score was adjusted
+        </p>
+        <p className="mt-2 text-sm leading-relaxed text-slate-700">
+          {risk.adjustment_rationale}
+        </p>
+      </section>
+
+      <p className="mt-4 text-sm leading-relaxed text-slate-700">{risk.risk_rationale}</p>
+    </div>
+  )
+}
+
+function DeltaArrow({ delta }: { delta: number }) {
+  if (delta === 0) {
+    return (
+      <div className="flex flex-col items-center text-slate-400">
+        <span className="text-2xl leading-none">≈</span>
+        <span className="text-[10px] font-semibold uppercase tracking-wide">no change</span>
+      </div>
+    )
+  }
+  const up = delta > 0
+  const color = up ? '#b91c1c' : '#15803d'
+  return (
+    <div className="flex flex-col items-center" style={{ color }}>
+      <span className="text-3xl leading-none">{up ? '↑' : '↓'}</span>
+      <span className="text-xs font-semibold tabular-nums">
+        {up ? '+' : ''}
+        {delta}
+      </span>
+      <span className="text-[10px] font-semibold uppercase tracking-wide">
+        {up ? 'riskier' : 'safer'}
+      </span>
     </div>
   )
 }
