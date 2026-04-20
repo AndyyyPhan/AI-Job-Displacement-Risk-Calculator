@@ -55,16 +55,19 @@ export const scoredTaskSchema = z.object({
   predicted_interaction_type: interactionTypeSchema,
 })
 
-export const riskProfileSchema = z.object({
+export const agentRiskAssessmentSchema = z.object({
   empirical_baseline_score: z.number().min(0).max(100),
   adjusted_risk_score: z.number().min(0).max(100),
   adjustment_rationale: z.string().min(1),
-  timeline_category: z.enum(['near-term', 'mid-term', 'long-term']),
-  timeline_years_low: z.number().min(0).max(50),
-  timeline_years_high: z.number().min(0).max(50),
   scored_tasks: z.array(scoredTaskSchema).min(1),
   risk_rationale: z.string().min(1),
   spectrum_summary: z.string().min(1),
+})
+
+export const riskProfileSchema = agentRiskAssessmentSchema.extend({
+  timeline_category: z.enum(['near-term', 'mid-term', 'long-term']),
+  timeline_years_low: z.number().min(0).max(50),
+  timeline_years_high: z.number().min(0).max(50),
 })
 
 export const recommendedJobSchema = z.object({

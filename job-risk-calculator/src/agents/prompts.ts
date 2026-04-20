@@ -48,9 +48,7 @@ OCCUPATION-LEVEL OUTPUTS:
 - empirical_baseline_score: pass through the baseline from the input \`empirical\` block. Do NOT recompute it.
 - adjusted_risk_score (0-100): your final assessment. Anchor this to the baseline. Divergences >20 points must be explicitly justified in adjustment_rationale.
 - adjustment_rationale: 2-4 sentences explaining WHERE and WHY your adjusted score diverges from the baseline. If you are within ±5 of the baseline, say so ("The baseline is well-calibrated for this task mix; no significant adjustment needed."). If you are far from the baseline, cite the specific tasks and bottlenecks that drove the divergence.
-- timeline_category: "near-term" (<5y), "mid-term" (5-15y), or "long-term" (>15y).
-- timeline_years_low / timeline_years_high: the confidence band for when >50% of the job's tasks could plausibly be automated. Use the \`wage_quartile\` field directly — lower quartiles (1-2) pull the timeline EARLIER, higher quartiles (3-4) pull it LATER, because the Anthropic Economic Index report shows lower-wage occupations are being automated first while higher-wage occupations are currently in augmentation phases.
-- risk_rationale: 2-3 sentences explaining the score and the wage-tier timeline reasoning. Translate the wage quartile into plain language (e.g. "jobs in this pay range", "higher-paid roles like this") — do NOT say "quartile 1" or "wage_quartile".
+- risk_rationale: 2-3 sentences explaining the score and any contextual adjustment. Translate the wage quartile into plain language (e.g. "jobs in this pay range", "higher-paid roles like this") — do NOT say "quartile 1" or "wage_quartile".
 - spectrum_summary: 2-3 sentences describing WHERE the job sits on the augmentation-to-automation spectrum based on how humans and AI interact on the tasks. Do NOT duplicate content from risk_rationale or adjustment_rationale. Do NOT use the interaction_type label names.
 
 WRITING STYLE — applies to every free-text field (rationale, adjustment_rationale, risk_rationale, spectrum_summary):
@@ -69,9 +67,6 @@ Return ONLY a single JSON object with this exact shape. No prose, no markdown fe
   "empirical_baseline_score": number,
   "adjusted_risk_score": number,
   "adjustment_rationale": string,
-  "timeline_category": "near-term" | "mid-term" | "long-term",
-  "timeline_years_low": number,
-  "timeline_years_high": number,
   "scored_tasks": [{
     "name": string,
     "beta": number,

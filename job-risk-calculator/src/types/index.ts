@@ -1,5 +1,6 @@
 import type { z } from 'zod'
 import type {
+  agentRiskAssessmentSchema,
   jobProfileSchema,
   jobTaskSchema,
   riskProfileSchema,
@@ -30,6 +31,7 @@ export type EmpiricalContext = z.infer<typeof empiricalContextSchema>
 export type BottleneckType = z.infer<typeof bottleneckTypeSchema>
 export type InteractionType = z.infer<typeof interactionTypeSchema>
 export type ScoredTask = z.infer<typeof scoredTaskSchema>
+export type AgentRiskAssessment = z.infer<typeof agentRiskAssessmentSchema>
 export type RiskProfile = z.infer<typeof riskProfileSchema>
 export type RecommendedJob = z.infer<typeof recommendedJobSchema>
 export type ResourceSelection = z.infer<typeof resourceSelectionSchema>

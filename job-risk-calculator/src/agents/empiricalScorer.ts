@@ -24,6 +24,10 @@ function round1(value: number): number {
   return Math.round(value * 10) / 10
 }
 
+function lerp(a: number, b: number, t: number): number {
+  return a + (b - a) * clamp(t, 0, 1)
+}
+
 export function wageTierAdjustment(quartile: number): number {
   const q = clamp(Math.round(quartile), 1, 4) as 1 | 2 | 3 | 4
   return WAGE_TIER_ADJUSTMENT[q]
@@ -111,21 +115,51 @@ function taskBandForBeta(beta: number): BandConfig {
   }
 }
 
-function timelineFromScore(score: number): {
-  category: RiskProfile['timeline_category']
-  low: number
-  high: number
-} {
-  if (score >= 85) return { category: 'near-term', low: 2, high: 5 }
-  if (score <= 15) return { category: 'long-term', low: 15, high: 25 }
-  if (score >= 60) return { category: 'near-term', low: 3, high: 8 }
-  if (score >= 40) return { category: 'mid-term', low: 5, high: 12 }
-  return { category: 'long-term', low: 10, high: 20 }
+export interface TimelineWindow {
+  timeline_category: RiskProfile['timeline_category']
+  timeline_years_low: number
+  timeline_years_high: number
+}
+
+export function computeTimelineWindow(
+  empirical: EmpiricalContext,
+  adjustedRiskScore: number,
+): TimelineWindow {
+  const adoptionRatio = clamp(
+    empirical.observed_exposure / Math.max(empirical.occupation_beta, 0.01),
+    0,
+    1,
+  )
+
+  const base = 12
+  const adoptionAdj = lerp(3, -5, adoptionRatio)
+  const growthAdj = lerp(-3, 2, (empirical.bls_projected_growth_pct + 15) / 45)
+  const WAGE_ADJ = { 1: -2, 2: -1, 3: 0, 4: 1 } as const
+  const wageKey = clamp(Math.round(empirical.wage_quartile), 1, 4) as 1 | 2 | 3 | 4
+  const wageAdj = WAGE_ADJ[wageKey]
+  const midpoint = clamp(base + adoptionAdj + growthAdj + wageAdj, 2, 20)
+
+  let nearSignals = 0
+  if (adoptionRatio > 0.6) nearSignals++
+  if (empirical.bls_projected_growth_pct < 0) nearSignals++
+  if (empirical.wage_quartile <= 2) nearSignals++
+  if (adjustedRiskScore >= 60) nearSignals++
+  const agreement = Math.max(nearSignals, 4 - nearSignals) as 2 | 3 | 4
+  const HALF_WIDTH = { 2: 4, 3: 3, 4: 2 } as const
+  const halfWidth = HALF_WIDTH[agreement]
+
+  const timeline_years_low = clamp(Math.round(midpoint - halfWidth), 1, 18)
+  const timeline_years_high = clamp(Math.round(midpoint + halfWidth), 3, 25)
+
+  const timeline_category: TimelineWindow['timeline_category'] =
+    midpoint <= 6 ? 'near-term' : midpoint <= 12 ? 'mid-term' : 'long-term'
+
+  return { timeline_category, timeline_years_low, timeline_years_high }
 }
 
 export function synthesizeRiskFromBaseline(profile: JobProfile): RiskProfile {
   const score = profile.empirical.empirical_baseline_score
-  const timeline = timelineFromScore(score)
+  const timeline = computeTimelineWindow(profile.empirical, score)
   const scored_tasks: ScoredTask[] = profile.tasks.map((task) => {
     const band = taskBandForBeta(task.beta)
     return {
@@ -151,9 +185,7 @@ export function synthesizeRiskFromBaseline(profile: JobProfile): RiskProfile {
     adjusted_risk_score: score,
     adjustment_rationale:
       'This score is based entirely on published employment data — no contextual adjustment was needed for this occupation. Add details about your specific role for a more personalized assessment.',
-    timeline_category: timeline.category,
-    timeline_years_low: timeline.low,
-    timeline_years_high: timeline.high,
+    ...timeline,
     scored_tasks,
     risk_rationale: `Empirical baseline of ${score}/100 derived from Eloundou et al. task β (${Math.round(
       profile.empirical.occupation_beta * 100,
