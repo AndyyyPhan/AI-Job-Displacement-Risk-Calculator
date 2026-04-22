@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { Chip } from './ui/Chip'
-import { Dateline } from './ui/Dateline'
 import { Kicker } from './ui/Kicker'
 import { cn } from '../lib/cn'
 import type { OnetOccupation } from '../lib/onet'

@@ -79,7 +79,7 @@ export function RiskScore({ risk, jobTitle }: Props) {
             </p>
           </div>
 
-          <BaselineDelta baseline={baseline} adjusted={adjusted} delta={delta} />
+          <BaselineDelta baseline={baseline} delta={delta} />
 
           <blockquote
             className="relative border-l-2 pl-5 font-display text-[20px] leading-relaxed text-ink-2 md:text-[22px]"
@@ -142,14 +142,11 @@ function headlineSentence(score: number, risk: RiskProfile): string {
 
 function BaselineDelta({
   baseline,
-  adjusted,
   delta,
 }: {
   baseline: number
-  adjusted: number
   delta: number
 }) {
-  const accent = riskColor(adjusted)
   const baselineColor = riskColor(baseline)
   const direction = delta === 0 ? 'aligned' : delta > 0 ? 'riskier' : 'safer'
   const arrow = delta === 0 ? '≈' : delta > 0 ? '↑' : '↓'
