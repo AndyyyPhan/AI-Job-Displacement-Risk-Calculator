@@ -8,7 +8,7 @@ The scoring pipeline is anchored to published empirical data — Eloundou et al.
 ## Tech Stack
 - **Framework:** React + TypeScript (Vite)
 - **Styling:** Tailwind CSS v4 (via `@tailwindcss/vite`)
-- **Charts:** Recharts (timeline visualization with confidence band)
+- **Visualization:** Bespoke SVG/CSS components (`RiskDial`, `Sparkbar`, `StepRail`, etc.) — no Recharts or other chart library. (`recharts` is still listed in `package.json` as a leftover dependency and can be removed.)
 - **Validation:** Zod (validates structured JSON responses from Claude)
 - **API:** Anthropic API (`claude-sonnet-4-5`) via `fetch`
 - **Data:** Bundled O*NET Database enriched with external empirical datasets (see "Building the Enriched Dataset" below) — preprocessed into a static JSON file at build time
@@ -37,11 +37,12 @@ Three sequential steps, each passing structured JSON to the next. Agent 1 is a p
 ```json
 {
   "job_title": string,
-  "onet_match": string,       // "SOC code Title", e.g. "29-1224.00 Radiologists"
+  "onet_match": string,           // "SOC code Title", e.g. "29-1224.00 Radiologists"
+  "soc_major_group": string,      // 2-digit SOC major group, e.g. "29-0000" — used by Agent 3 to filter the resource registry
   "tasks": [{
     "name": string,
     "description": string,
-    "beta": number             // 0, 0.5, or 1 — from Eloundou et al.
+    "beta": number                // 0, 0.5, or 1 — from Eloundou et al.
   }],
   "skills": [string],
   "additional_context": string,
@@ -50,9 +51,10 @@ Three sequential steps, each passing structured JSON to the next. Agent 1 is a p
     "observed_exposure": number,
     "exposure_gap": number,
     "median_wage": number,
-    "wage_quartile": number,   // 1 (lowest) – 4 (highest)
+    "wage_quartile": number,      // 1 (lowest) – 4 (highest)
     "bls_projected_growth_pct": number,
-    "empirical_baseline_score": number  // 0–100
+    "empirical_baseline_score": number, // 0–100
+    "fallback_fields"?: string[]  // present only when onet.json shipped without empirical data for this occupation; lists which fields fell back to neutral defaults
   }
 }
 ```
@@ -96,16 +98,12 @@ The score is clamped to 0–100. It is explicitly **not** a final answer — it'
   - Task-level rationales explaining *why* a specific task is harder or easier to automate than its β score suggests (e.g., "β=1 but this task requires real-time physical inspection that LLMs cannot perform")
   - Context adjustments based on the user's additional input (e.g., "mostly remote, heavy client calls" shifts the social-component weighting)
   - The augmentation/automation spectrum tags (`predicted_interaction_type`) which require qualitative judgment
-  - Timeline reasoning that accounts for adoption barriers beyond what the empirical data captures
-- **Output (JSON):**
+- **Output (JSON):** (matches `agentRiskAssessmentSchema` in `src/agents/schemas.ts`)
 ```json
 {
   "empirical_baseline_score": number,  // pass-through from Agent 1 for display
   "adjusted_risk_score": number,       // 0–100, LLM's final assessment
   "adjustment_rationale": string,      // why the LLM diverged from baseline
-  "timeline_category": "near-term" | "mid-term" | "long-term",
-  "timeline_years_low": number,
-  "timeline_years_high": number,
   "scored_tasks": [{
     "name": string,
     "beta": number,                    // pass-through from Agent 1
@@ -115,10 +113,41 @@ The score is clamped to 0–100. It is explicitly **not** a final answer — it'
     "bottleneck_types": string[],
     "predicted_interaction_type": string
   }],
-  "spectrum_summary": string,
-  "risk_rationale": string
+  "risk_rationale": string,
+  "spectrum_summary": string
 }
 ```
+- **Not produced by Agent 2:** Timeline fields (`timeline_category`, `timeline_years_low`, `timeline_years_high`) are NOT in Agent 2's output schema. They are computed deterministically in code after Agent 2 returns (see "Timeline Window" below).
+
+### Timeline Window (deterministic, post-Agent-2)
+
+`computeTimelineWindow()` in `src/agents/empiricalScorer.ts` takes the occupation's `empirical` block plus Agent 2's `adjusted_risk_score` and returns `{ timeline_category, timeline_years_low, timeline_years_high }`. `App.tsx` merges this onto Agent 2's output to produce the full `RiskProfile` consumed by Agent 3 and the UI.
+
+**Formula:**
+```
+midpoint = clamp(12
+  + lerp(+3, -5, adoption_ratio)                  // high adoption pulls timeline in up to 5y
+  + lerp(-3, +2, (bls_growth + 15) / 45)          // negative growth pulls timeline in ~3y
+  + wage_adj,                                     // Q1: -2, Q2: -1, Q3: 0, Q4: +1
+  2, 20)
+
+where adoption_ratio = observed_exposure / max(occupation_beta, 0.01)
+
+near_signals = count of: adoption_ratio > 0.6, bls_growth < 0,
+                         wage_quartile ≤ 2, adjusted_risk_score ≥ 60
+agreement    = max(near_signals, 4 − near_signals)   // 2, 3, or 4
+half_width   = { 2: 4, 3: 3, 4: 2 }[agreement]       // wider band when signals disagree
+
+timeline_years_low  = clamp(round(midpoint − half_width), 1, 18)
+timeline_years_high = clamp(round(midpoint + half_width), 3, 25)
+
+timeline_category =
+  "near-term"  if midpoint ≤  6,
+  "mid-term"   if midpoint ≤ 12,
+  "long-term"  otherwise
+```
+
+The timeline is intentionally kept out of the LLM because (a) no published research produces calibrated per-occupation automation timelines, so the LLM would be guessing, and (b) a transparent, inspectable formula is easier to defend and tune than LLM output. The LLM's contribution to the timeline is funnelled through one input: its `adjusted_risk_score` is one of the four "near-term signals" that narrow or widen the confidence band.
 
 ### Conditional Agent 2 (optional optimization)
 For occupations where the empirical data tells a clear, unambiguous story AND the user hasn't added significant custom context, Agent 2 can be skipped entirely. Criteria for skipping:
@@ -146,7 +175,14 @@ When skipped, the app uses the empirical baseline directly and displays a note: 
     "registry_id": string,     // references an entry in the bundled registry
     "relevance": string        // LLM explains why this resource fits
   }],
-  "meta_skill_recommendation": string
+  "meta_skill_recommendation": {
+    "headline": string,                    // one-sentence plain-English hook
+    "rationale": string,                   // 2–3 sentences on the Economic Index finding (~10% higher success for high-tenure AI users)
+    "resources": [{                        // 2–3 selected resources from the registry, preferring Anthropic docs / DeepLearning.AI entries
+      "registry_id": string,
+      "relevance": string
+    }]
+  }
 }
 ```
 
@@ -160,7 +196,7 @@ The replacement is a static JSON registry (`src/data/resources.json`) curated at
 [{
   "id": string,
   "title": string,
-  "platform": "coursera" | "edx" | "mit_ocw" | "oreilly" | "khan_academy" | "udemy" | "linkedin_learning" | "other",
+  "platform": "coursera" | "edx" | "mit_ocw" | "oreilly" | "khan_academy" | "udemy" | "linkedin_learning" | "anthropic_docs" | "deeplearning_ai" | "other",
   "url": string,              // verified at build time
   "skill_categories": [string], // e.g. ["data_analysis", "python", "statistics"]
   "occupational_families": [string], // SOC major groups this is relevant to, e.g. ["15-0000", "13-0000"]
@@ -170,7 +206,7 @@ The replacement is a static JSON registry (`src/data/resources.json`) curated at
 ```
 
 **How the registry is built:**
-1. Start with a manually curated seed list of ~100–200 high-quality resources across major reskilling pathways (coding, data analysis, project management, healthcare admin, trades, etc.), sourced from Coursera, edX, MIT OCW, O'Reilly, Khan Academy, and LinkedIn Learning.
+1. Start with a manually curated seed list in `scripts/resources-seed.json` covering major reskilling pathways (coding, data analysis, project management, healthcare admin, trades, etc.), sourced from Coursera, edX, MIT OCW, O'Reilly, Khan Academy, LinkedIn Learning, Anthropic docs, and DeepLearning.AI. The last two categories exist specifically to support the `meta_skill_recommendation` on AI collaboration.
 2. Verify every URL with a HEAD request in the build script. Drop any that return non-200 status.
 3. Tag each resource with skill categories and relevant SOC major groups.
 4. The registry ships as part of the build output. Refresh periodically (quarterly is fine — course catalogs change slowly).
@@ -191,12 +227,13 @@ The replacement is a static JSON registry (`src/data/resources.json`) curated at
    - **No match:** friendly error with "Start over"
 3. User confirms or adjusts task list on the task confirmation screen
 4. Agent 1 computes `empirical_baseline_score` from bundled data
-5. If conditional-skip criteria are met and the user hasn't customized: skip Agent 2, use empirical baseline directly
+5. If conditional-skip criteria are met and the user hasn't customized: skip Agent 2, use `synthesizeRiskFromBaseline()` (deterministic code) to produce a RiskProfile directly from the empirical baseline
 6. Otherwise: Agent 2 runs, adjusting the empirical baseline with contextual reasoning
-7. Agent 3 runs (Anthropic API call, no tools, selects from bundled resource registry)
-8. Results screen shows:
+7. `computeTimelineWindow()` runs (deterministic, pure code) against the occupation's empirical block plus the Agent 2 `adjusted_risk_score` — produces `timeline_category` / `timeline_years_low` / `timeline_years_high`, which are merged onto Agent 2's output to form the final `RiskProfile`
+8. Agent 3 runs (Anthropic API call, no tools, selects from bundled resource registry)
+9. Results screen shows:
    - **Empirical baseline** (from published data) alongside **adjusted score** (from LLM), with clear labels explaining each
-   - Timeline chart (Recharts line with confidence band / shaded area)
+   - Timeline range rendered inline in the `RiskScore` hero (e.g. "near-term · +3–7y"); no dedicated chart component
    - Per-task breakdown with β scores shown alongside LLM bottleneck assessments
    - Key empirical context: median wage, BLS projected growth, observed exposure %
    - Reskilling panel with job alternatives and resources
@@ -204,46 +241,66 @@ The replacement is a static JSON registry (`src/data/resources.json`) curated at
 ## Key Files
 ```
 job-risk-calculator/
-  data/
-    onet-raw/                   # O*NET xlsx download (gitignored — refresh from onetcenter.org)
-    eloundou-beta/              # Eloundou et al. task-level β scores (gitignored — see data sources)
-    economic-index/             # Anthropic Economic Index observed exposure (gitignored)
-    bls-wages/                  # BLS OEWS wage data by SOC (gitignored)
-    bls-projections/            # BLS employment projections 2024–2034 (gitignored)
+  data/                         # Raw inputs for build:data (all gitignored)
+    onet-raw/                   # O*NET xlsx download — refresh from onetcenter.org
+    eloundou-beta/              # Eloundou et al. task-level β scores
+    economic-index/             # Anthropic Economic Index observed exposure
+    bls-wages/                  # BLS OEWS wage data by SOC
+    bls-projections/            # BLS employment projections 2024–2034
   scripts/
-    build-onet-data.mjs         # Parses all data sources → src/data/onet.json
-    build-resources.mjs         # Curates + URL-verifies → src/data/resources.json
+    build-onet-data.mjs         # Parses all five raw data sources → src/data/onet.json
+    build-resources.mjs         # Reads resources-seed.json, URL-verifies, → src/data/resources.json
+    resources-seed.json         # Hand-curated seed list consumed by build-resources.mjs
   src/
     agents/
-      anthropicClient.ts        # Shared fetch wrapper + Zod retry + typed errors
-      schemas.ts                # All three Zod schemas in one file
+      anthropicClient.ts        # Shared fetch wrapper + Zod retry + typed errors (AgentAPIError, AgentValidationError)
+      schemas.ts                # All Zod schemas: jobProfile, agentRiskAssessment, riskProfile, reskillingPlan, resourceRegistry
       prompts.ts                # Agent 2 + Agent 3 system prompts
-      jobResearcher.ts          # Agent 1 — delegates to src/lib/onet.ts (no LLM)
-      empiricalScorer.ts        # Computes empirical_baseline_score from bundled data (no LLM)
+      jobResearcher.ts          # Agent 1 — delegates to src/lib/onet.ts (no LLM). Exports researchJob, finalizeJobResearch
+      empiricalScorer.ts        # Pure code: computeEmpiricalBaselineScore, enrichEmpiricalContext, shouldSkipRiskScorer, synthesizeRiskFromBaseline, computeTimelineWindow
       riskScorer.ts             # Agent 2 LLM call — adjusts empirical baseline
       reskillingAdvisor.ts      # Agent 3 LLM call — selects from bundled resource registry
     components/
       JobInput.tsx              # Step 1: job title + context form
       JobMatchPicker.tsx        # Step 1b: shown only on ambiguous O*NET matches
-      TaskConfirmation.tsx      # Step 2: confirm/edit O*NET tasks (now shows β per task)
-      RiskScore.tsx             # Score display — shows both empirical baseline and adjusted score
-      EmpiricalContext.tsx      # NEW: displays wage, BLS growth, observed exposure data
-      TimelineChart.tsx         # Recharts ComposedChart with sigmoid curve + confidence band
-      TaskBreakdown.tsx         # Per-task bottleneck cards (now shows β alongside LLM scores)
+      TaskConfirmation.tsx      # Step 2: confirm/edit O*NET tasks (shows β per task)
+      RiskScore.tsx             # Results hero — dial + both scores + baseline-delta block + rationale blockquote + interaction-spectrum band. Timeline range rendered inline; no separate chart component.
+      EmpiricalContext.tsx      # Displays wage, BLS growth, observed exposure data
+      TaskBreakdown.tsx         # Per-task bottleneck cards (shows β alongside LLM scores)
       ReskillingPanel.tsx       # Job alternatives + resources (resolves registry_id → full entry)
       LoadingState.tsx          # Shared spinner with per-step label
       ErrorState.tsx            # Shared error display with retry
+      ui/                       # Presentational primitives — no business logic
+        AnimatedNumber.tsx      # Tweened number counter
+        Chip.tsx                # Small capsule label
+        Dateline.tsx            # Mono uppercase byline used throughout
+        Grain.tsx               # Background noise texture overlay
+        Kicker.tsx              # Section kicker label
+        RiskDial.tsx            # Circular risk dial SVG (used for the primary score)
+        Sparkbar.tsx            # Inline horizontal bar for comparing values
+        StepRail.tsx            # Top-of-page phase indicator (intake → match → tasks → analysis → dossier)
     data/
       onet.json                 # Generated — 893 occupations, ~13k Core tasks, enriched with empirical data
       resources.json            # Generated — curated resource registry with verified URLs
     lib/
-      onet.ts                   # Dynamic-import loader + ranked fuzzy matcher (strong/ambiguous/none)
+      onet.ts                   # Dynamic-import loader + ranked fuzzy matcher (strong/ambiguous/none) + buildJobProfileFromOccupation + getSocMajorGroup
+      resourceRegistry.ts       # loadResourceRegistry, filterRegistryForProfile, resolveRegistryId
+      formatters.ts             # riskColor, riskLabel, timelineLabel, formatDelta, parseSocCode
+      cn.ts                     # Tiny className-join helper
     types/
-      index.ts                  # Shared TypeScript types (z.infer from schemas)
-    App.tsx                     # Step state machine, orchestrates agents (includes conditional skip logic)
+      index.ts                  # Shared TypeScript types (z.infer from schemas) + Step discriminated union
+    App.tsx                     # Step state machine, orchestrates agents (includes conditional skip logic + timeline merge)
     main.tsx
-    index.css                   # @import "tailwindcss"
+    index.css                   # @import "tailwindcss" + design tokens
     vite-env.d.ts               # ImportMetaEnv typing
+  public/                       # Static assets served as-is
+  dist/                         # Vite build output
+  index.html
+  vite.config.ts
+  tsconfig*.json
+  eslint.config.js
+  package.json
+  .env.example                  # Template showing VITE_ANTHROPIC_API_KEY
 ```
 
 ## Building the Enriched Dataset
@@ -331,7 +388,7 @@ The project's scoring methodology draws on two primary sources and two supplemen
 
 ### What the empirical data does NOT cover
 - **Task reinstatement effects:** Acemoglu & Restrepo (2018, 2019) emphasize that automation also creates new labor-intensive tasks that partially offset displacement. Neither the β scores nor observed exposure capture this. The results screen should note this limitation.
-- **Occupation-specific timelines:** No existing study produces calibrated predictions for *when* a specific occupation will be substantially automated. The timeline estimates from Agent 2 are the LLM's informed judgment, not empirical forecasts. The UI should clearly label them as such.
+- **Occupation-specific timelines:** No existing study produces calibrated predictions for *when* a specific occupation will be substantially automated. The timeline produced by `computeTimelineWindow()` is a transparent heuristic formula over the empirical inputs plus Agent 2's adjusted score — not an empirically calibrated forecast. The UI should clearly label it as such.
 - **Non-LLM automation:** The Eloundou et al. β scores and Anthropic Economic Index measure LLM exposure specifically. Robotics, computer vision, and other AI modalities are not captured. Occupations with high physical-task content may face automation pressure from these other technologies that the empirical data here doesn't reflect.
 
 ## Cost / Rate-Limit Notes
